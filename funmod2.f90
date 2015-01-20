@@ -25,6 +25,7 @@ subroutine bytes_in_rec( bytes )
   r = 1.0;
   bytes = 0
   do i = 1,8
+     !open(unit=15,file='/home/jason/tmpbytetst',access='direct',recl=i)
      open(unit=15,status='scratch',access='direct',recl=i)
      write(15,rec=1,iostat=ierr) r
      close(15, status='delete')
