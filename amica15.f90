@@ -3,12 +3,7 @@ program main
 !#define MKL
 
 use funmod2
-
-!use mpi
-
-#ifndef MKL
-!use mpi
-#endif
+use mpi
 
 implicit none
 intrinsic count
@@ -18,7 +13,6 @@ intrinsic cmplx
 
 include 'amica15_header.f90'
 
-include 'mpif.h'
 
 #ifdef MKL
 include 'mkl_vml.f90'
@@ -94,11 +88,11 @@ end if
 
 call MPI_BCAST(max_thrds,1,MPI_INTEGER,0,seg_comm,ierr)
 
-if ((node_procs == 1) .and. (seg_nodes == 1)) then
+!if ((node_procs == 1) .and. (seg_nodes == 1)) then
    num_thrds = max_thrds
-else
-   num_thrds = min(max_thrds,node_procs)
-end if
+!else
+!   num_thrds = min(max_thrds,node_procs)
+!end if
 print *, myrank+1, ': setting num_thrds to ', num_thrds, ' ...'; call flush(6)
 call omp_set_num_threads(num_thrds)
 
@@ -452,7 +446,7 @@ if (do_sphere .or. load_sphere) then
          end do
          call DCOPY(nx*nx,Stmp2,1,Stmp,1)
          sldet = dble(0.0)
-         do i = 1,nx
+         do i = 1,numeigs
             do j = 1,nx
                Stmp2(i,j) = Stmp2(i,j) / sqrt(eigv(i))
                !if (isNaN(Stmp2(i,j))) then
