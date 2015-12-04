@@ -3,7 +3,7 @@ program main
 !#define MKL
 
 use funmod2
-use mpi
+!use mpi
 
 implicit none
 intrinsic count
@@ -13,10 +13,10 @@ intrinsic cmplx
 
 include 'amica15_header.f90'
 
+include 'mpif.h'
 
 #ifdef MKL
 include 'mkl_vml.f90'
-include 'mpif.h'
 #endif
 
 
@@ -258,166 +258,178 @@ nx = data_dim
 allocate( work(5*nx*nx),stat=ierr); call tststat(ierr)
 allocate(mean(nx))
 mean = dble(0.0)
-if (do_mean .or. load_mean) then
 
-   if (load_mean) then
-
-      if (seg_rank == 0) then
-         print *, myrank+1, ': reading mean from: ', trim(adjustl(indirparam))//'/'//'mean'; call flush(6)
-         open(unit=15,file=trim(adjustl(indirparam))//'/'//'mean',access='direct',recl=2*nbyte*nx)
-         read(15,rec=1) mean
-         close(15)
-         !print *, 'mean = ', mean(1:min(5,nw)); call flush(6)
-      end if
-
-   else
-      if (myrank == 0) then
-         print *, 'getting the mean ...'; call flush(6)
-      end if
-      allocate(meantmp(nx))
-      meantmp = dble(0.0)
-      call DSCAL(nx,dble(0.0),meantmp,1)
-      cnt1 = 0
-      do seg = 1,numsegs
-         fnum = dataseg(seg)%filenum
-         fieldsize = dataseg(seg)%lastdim
-         ldim = dataseg(seg)%lastdim
-         
-         call DAXPY(nx,dble(1.0),sum(dataseg(seg)%data(:,1:ldim),2),1,meantmp,1)
-         cnt1 = cnt1 + fieldsize
-      end do
-      
-      call DSCAL(nx,dble(0.0),mean,1)
-      cnt = 0
-      call MPI_REDUCE(meantmp,mean,nx,MPI_DOUBLE_PRECISION,MPI_SUM,0,seg_comm,ierr)
-      call MPI_REDUCE(cnt1,cnt,1,MPI_INTEGER,MPI_SUM,0,seg_comm,ierr)
-      
-      if (myrank == 0) then
-         call DSCAL(nx,dble(1.0)/dble(cnt),mean,1)
-         print *, ' mean = ', mean(1:3); call flush(6)
-      end if
-
+if (load_mean) then
+   if (seg_rank == 0) then
+      print *, myrank+1, ': reading mean from: ', trim(adjustl(indirparam))//'/'//'mean'; call flush(6)
+      open(unit=15,file=trim(adjustl(indirparam))//'/'//'mean',access='direct',recl=2*nbyte*nx)
+      read(15,rec=1) mean
+      close(15)
+      !print *, 'mean = ', mean(1:min(5,nw)); call flush(6)
    end if
+elseif (do_mean) then
 
-   call MPI_BCAST(mean,nx,MPI_DOUBLE_PRECISION,0,seg_comm,ierr)
-
-   !--- subtract the mean
    if (myrank == 0) then
-      print *, 'subtracting the mean ...'; call flush(6)
+      print *, 'getting the mean ...'; call flush(6)
    end if
-
+   allocate(meantmp(nx))
+   meantmp = dble(0.0)
+   call DSCAL(nx,dble(0.0),meantmp,1)
+   cnt1 = 0
    do seg = 1,numsegs
-      fnum = dataseg(seg)%filenum         
+      fnum = dataseg(seg)%filenum
       fieldsize = dataseg(seg)%lastdim
-      
-      num_blocks = fieldsize /  blk_size(seg)
-      lastblocksize = mod(fieldsize,blk_size(seg))
+      ldim = dataseg(seg)%lastdim
 
-      !print *, 'num_blocks = ', num_blocks, ' lastblocksize = ', lastblocksize, ' fieldsize = ', fieldsize; call flush(6);
-
-      do k = 1,num_blocks
-         bstrt = (k-1)*blk_size(seg) + 1
-         bstp = bstrt + blk_size(seg) - 1
-         call DAXPY(nx*blk_size(seg),dble(-1.0),spread(mean,2,blk_size(seg)),1,dataseg(seg)%data(:,bstrt:bstp),1)
-      end do
-      if (lastblocksize .ne. 0) then
-         bstrt = num_blocks*blk_size(seg) + 1
-         bstp = fieldsize
-         call DAXPY(nx*lastblocksize,dble(-1.0),spread(mean,2,lastblocksize),1,dataseg(seg)%data(:,bstrt:bstp),1)
-      end if
+      call DAXPY(nx,dble(1.0),sum(dataseg(seg)%data(:,1:ldim),2),1,meantmp,1)
+      cnt1 = cnt1 + fieldsize
    end do
-else
-   mean = dble(0.0)
+
+   call DSCAL(nx,dble(0.0),mean,1)
+   cnt = 0
+   call MPI_REDUCE(meantmp,mean,nx,MPI_DOUBLE_PRECISION,MPI_SUM,0,seg_comm,ierr)
+   call MPI_REDUCE(cnt1,cnt,1,MPI_INTEGER,MPI_SUM,0,seg_comm,ierr)
+
+   if (myrank == 0) then
+      call DSCAL(nx,dble(1.0)/dble(cnt),mean,1)
+      print *, ' mean = ', mean(1:3); call flush(6)
+   end if
 end if
+
+
+call MPI_BCAST(mean,nx,MPI_DOUBLE_PRECISION,0,seg_comm,ierr)
+
+!--- subtract the mean
+if (myrank == 0) then
+   print *, 'subtracting the mean ...'; call flush(6)
+end if
+
+do seg = 1,numsegs
+   fnum = dataseg(seg)%filenum         
+   fieldsize = dataseg(seg)%lastdim
+
+   num_blocks = fieldsize /  blk_size(seg)
+   lastblocksize = mod(fieldsize,blk_size(seg))
+
+   !print *, 'num_blocks = ', num_blocks, ' lastblocksize = ', lastblocksize, ' fieldsize = ', fieldsize; call flush(6);
+
+   do k = 1,num_blocks
+      bstrt = (k-1)*blk_size(seg) + 1
+      bstp = bstrt + blk_size(seg) - 1
+      call DAXPY(nx*blk_size(seg),dble(-1.0),spread(mean,2,blk_size(seg)),1,dataseg(seg)%data(:,bstrt:bstp),1)
+   end do
+   if (lastblocksize .ne. 0) then
+      bstrt = num_blocks*blk_size(seg) + 1
+      bstp = fieldsize
+      call DAXPY(nx*lastblocksize,dble(-1.0),spread(mean,2,lastblocksize),1,dataseg(seg)%data(:,bstrt:bstp),1)
+   end if
+end do
+
 
 
 !------------------------ sphere the data -------------------------------
 allocate(S(nx,nx)); S = dble(0.0)
 allocate(Stmp(nx,nx)); Stmp = dble(0.0)
-if (do_sphere .or. load_sphere) then
+!--- get the covariance matrix
+if (myrank == 0) then
+   print *, 'getting the covariance matrix ...'; call flush(6)
+end if
 
-   if (load_sphere) then      
-      if (seg_rank == 0) then         
-         print *, myrank+1, ': reading S from: ', trim(adjustl(indirparam))//'/'//'S'; call flush(6)
-         open(unit=15,file=trim(adjustl(indirparam))//'/'//'S',access='direct',recl=2*nbyte*nx*nx)
-         read(15,rec=1) S
-         close(15)
-         !print *, 'initial S = ', S(1:min(5,nx*nx)); call flush(6)
-         if (doPCA) then
-            numeigs = pcakeep
-         else
-            numeigs = nx
-         end if
+call DSCAL(nx*nx,dble(0.0),Stmp,1)
 
-         call DCOPY(nx*nx,S,1,Stmp,1)
-         lwork = 5*nx*nx
-         allocate( wr(nx),stat=ierr); call tststat(ierr)
-         call DGEQRF(nx,nx,Stmp,nx,wr,work,lwork,info)
-         if (info < 0) then
-            print *, 'error getting QR!!!'
-         end if
-         sldet = dble(0.0)
-         do i = 1,nx
-            if (Stmp(i,i) .ne. dble(0.0)) then
-               sldet = sldet + log(abs(Stmp(i,i)))
-            else
-               print *, 'S determinant zero! Ignoring zero eigenvalues.'; call flush(6)
-            end if
-         end do
-         deallocate(wr)
+cnt1 = 0
+do seg = 1,numsegs
+   fnum = dataseg(seg)%filenum
+   fieldsize = dataseg(seg)%lastdim
+   ldim = dataseg(seg)%lastdim
+   !print *, 'seg ', seg, ' fnum = ', fnum, ' fieldsize = ', fieldsize, ' ldim = ', ldim; call flush(6)
+   num_blocks = fieldsize / blk_size(seg)
+   lastblocksize = mod(fieldsize,blk_size(seg))
+   !print *, 'seg ', seg, ' num_blocks = ', num_blocks, ' lastblocksize = ', lastblocksize; call flush(6)
+   do k = 1,num_blocks
+      bstrt = (k-1)*blk_size(seg) + 1
+      bstp = bstrt + blk_size(seg) - 1
+      call DSYRK('L','N',nx,blk_size(seg),dble(1.0),dataseg(seg)%data(:,bstrt:bstp),nx,dble(1.0),Stmp,nx)
+   end do
+   if (lastblocksize .ne. 0) then
+      bstrt = num_blocks*blk_size(seg) + 1
+      bstp = ldim
+      call DSYRK('L','N',nx,lastblocksize,dble(1.0),dataseg(seg)%data(:,bstrt:bstp),nx,dble(1.0),Stmp,nx)
+   end if
+   cnt1 = cnt1 + fieldsize
+
+end do
+call DSCAL(nx*nx,dble(0.0),S,1)
+cnt = 0
+call MPI_REDUCE(Stmp,S,nx*nx,MPI_DOUBLE_PRECISION,MPI_SUM,0,seg_comm,ierr)
+call MPI_REDUCE(cnt1,cnt,1,MPI_INTEGER,MPI_SUM,0,seg_comm,ierr)
+if (myrank == 0) then
+   print *, 'cnt = ', cnt; call flush(6)
+   call DSCAL(nx*nx,dble(1.0)/dble(cnt),S,1)
+end if
+
+call MPI_BCAST(S,nx*nx,MPI_DOUBLE_PRECISION,0,seg_comm,ierr)
+allocate(eigs(nx))
+allocate(eigv(nx))
+lwork = 10*nx*nx
+print *, 'doing eig nx = ', nx, ' lwork = ', lwork; call flush(6)
+call DCOPY(nx*nx,S,1,Stmp,1)
+
+call DSYEV('V','L',nx,Stmp,nx,eigs,work,lwork,info)
+
+if (info == 0) then
+   print *, 'minimum eigenvalues = ', eigs(1:min(nx/2,3))
+   write(20,*) 'minimum eigenvalues = ', eigs(1:min(nx/2,3))
+   print *, 'maximum eigenvalues = ', eigs(nx:(nx-min(nx/2,3)+1):-1)
+   write(20,*) 'maximum eigenvalues = ', eigs(nx:(nx-min(nx/2,3)+1):-1)
+   call flush(6)
+else
+   print "(a)", 'Error doing eigenvalue decomposition!!!'
+   write(20,"(a)") 'Error doing eigenvalue decomposition!!!'
+   call flush(6)
+end if
+
+numeigs = min(pcakeep,count(eigs > mineig))
+print *, 'num eigs kept = ', numeigs; call flush(6)
+write(20,*) 'num eigs kept = ', numeigs; call flush(6)
+
+
+if (load_sphere) then
+
+   if (seg_rank == 0) then         
+      print *, myrank+1, ': reading S from: ', trim(adjustl(indirparam))//'/'//'S'; call flush(6)
+      open(unit=15,file=trim(adjustl(indirparam))//'/'//'S',access='direct',recl=2*nbyte*nx*nx)
+      read(15,rec=1) S
+      close(15)
+      !print *, 'initial S = ', S(1:min(5,nx*nx)); call flush(6)
+
+      call DCOPY(nx*nx,S,1,Stmp,1)
+      lwork = 5*nx*nx
+      allocate( wr(nx),stat=ierr); call tststat(ierr)
+      call DGEQRF(nx,nx,Stmp,nx,wr,work,lwork,info)
+      if (info < 0) then
+         print *, 'error getting QR!!!'
       end if
- 
-   else
-      if (myrank == 0) then
-         print *, 'getting the sphering matrix ...'; call flush(6)
-      end if
-
-      call DSCAL(nx*nx,dble(0.0),Stmp,1)
-      
-      cnt1 = 0
-      do seg = 1,numsegs
-         fnum = dataseg(seg)%filenum
-         fieldsize = dataseg(seg)%lastdim
-         ldim = dataseg(seg)%lastdim
-         !print *, 'seg ', seg, ' fnum = ', fnum, ' fieldsize = ', fieldsize, ' ldim = ', ldim; call flush(6)
-         num_blocks = fieldsize / blk_size(seg)
-         lastblocksize = mod(fieldsize,blk_size(seg))
-         !print *, 'seg ', seg, ' num_blocks = ', num_blocks, ' lastblocksize = ', lastblocksize; call flush(6)
-         do k = 1,num_blocks
-            bstrt = (k-1)*blk_size(seg) + 1
-            bstp = bstrt + blk_size(seg) - 1
-            call DSYRK('L','N',nx,blk_size(seg),dble(1.0),dataseg(seg)%data(:,bstrt:bstp),nx,dble(1.0),Stmp,nx)
-         end do
-         if (lastblocksize .ne. 0) then
-            bstrt = num_blocks*blk_size(seg) + 1
-            bstp = ldim
-            call DSYRK('L','N',nx,lastblocksize,dble(1.0),dataseg(seg)%data(:,bstrt:bstp),nx,dble(1.0),Stmp,nx)
-         end if
-         cnt1 = cnt1 + fieldsize
-         
+      sldet = dble(0.0)
+      do i = 1,numeigs
+         sldet = sldet + log(Stmp(i,i))
       end do
-      call DSCAL(nx*nx,dble(0.0),S,1)
-      cnt = 0
-      call MPI_REDUCE(Stmp,S,nx*nx,MPI_DOUBLE_PRECISION,MPI_SUM,0,seg_comm,ierr)
-      call MPI_REDUCE(cnt1,cnt,1,MPI_INTEGER,MPI_SUM,0,seg_comm,ierr)
-      if (myrank == 0) then
-         print *, 'cnt = ', cnt; call flush(6)
-         call DSCAL(nx*nx,dble(1.0)/dble(cnt),S,1)
-      end if
+      deallocate(wr)
+   end if
+else
+   !--- get the sphering matrix
+   if (myrank == 0) then
+      print *, 'getting the sphering matrix ...'; call flush(6)
+   end if
 
-      !allocate(dCov(nx,nx))
-      !call DCOPY(nx*nx,S,1,dCov,1)
-
-
+   if (do_sphere) then
       if (seg_rank == 0) then
-         allocate(eigs(nx))
-         allocate(eigv(nx))
          lwork = 10*nx*nx
-         print *, 'doing eig nx = ', nx, ' lwork = ', lwork; call flush(6)
+         !print *, 'doing eig nx = ', nx, ' lwork = ', lwork; call flush(6)
          call DCOPY(nx*nx,S,1,Stmp,1)
 
          call DSYEV('V','L',nx,Stmp,nx,eigs,work,lwork,info)
-         
+
          if (info == 0) then
             print *, 'minimum eigenvalues = ', eigs(1:min(nx/2,3))
             write(20,*) 'minimum eigenvalues = ', eigs(1:min(nx/2,3))
@@ -429,11 +441,11 @@ if (do_sphere .or. load_sphere) then
             write(20,"(a)") 'Error doing eigenvalue decomposition!!!'
             call flush(6)
          end if
-         
+
          numeigs = min(pcakeep,count(eigs > mineig))
          print *, 'num eigs kept = ', numeigs; call flush(6)
          write(20,*) 'num eigs kept = ', numeigs; call flush(6)
-         
+
          allocate(Stmp2(nx,nx)); Stmp2 = dble(0.0)
          !call DSCAL(nx*nx,dble(0.0),Stmp2,1)
          !---reverse the order of eigenvectors
@@ -460,134 +472,76 @@ if (do_sphere .or. load_sphere) then
          if (numeigs == nx) then
             call DSCAL(nx*nx,dble(0.0),S,1)
             if (do_approx_sphere) then
-                call DGEMM('T','N',nx,nx,nx,dble(1.0),Stmp,nx,Stmp2,nx,dble(1.0),S,nx)
+               call DGEMM('T','N',nx,nx,nx,dble(1.0),Stmp,nx,Stmp2,nx,dble(1.0),S,nx)
             else
-                call DCOPY(nx*nx,Stmp2,1,S,1)       
+               call DCOPY(nx*nx,Stmp2,1,S,1)       
             endif
          else
-
             if (do_approx_sphere) then
-                allocate(Stmp3(numeigs,numeigs)); Stmp3 = dble(0.0);
-                call DCOPY(nx*nx,Stmp,1,S,1)
-                call DGESVD( 'O', 'A', numeigs, numeigs, S, nx,  eigs,  S,  nx, Stmp,  nx, work, lwork, info )
-                call DSCAL(numeigs*numeigs,dble(0.0),Stmp3,1)
-                call DGEMM('T','T',numeigs,numeigs,numeigs,dble(1.0),Stmp,nx,S,nx,dble(1.0),Stmp3,numeigs)
-                call DSCAL(nx*nx,dble(0.0),S,1)
-                call DGEMM('N','N',numeigs,nx,numeigs,dble(1.0),Stmp3,numeigs,Stmp2,nx,dble(1.0),S,nx)
+               allocate(Stmp3(numeigs,numeigs)); Stmp3 = dble(0.0);
+               call DCOPY(nx*nx,Stmp,1,S,1)
+               call DGESVD( 'O', 'A', numeigs, numeigs, S, nx,  eigs,  S,  nx, Stmp,  nx, work, lwork, info )
+               call DSCAL(numeigs*numeigs,dble(0.0),Stmp3,1)
+               call DGEMM('T','T',numeigs,numeigs,numeigs,dble(1.0),Stmp,nx,S,nx,dble(1.0),Stmp3,numeigs)
+               call DSCAL(nx*nx,dble(0.0),S,1)
+               call DGEMM('N','N',numeigs,nx,numeigs,dble(1.0),Stmp3,numeigs,Stmp2,nx,dble(1.0),S,nx)
             else
-                call DCOPY(nx*nx,Stmp2,1,S,1)       
+               call DCOPY(nx*nx,Stmp2,1,S,1)       
             end if
          end if
-
       end if
-   end if
 
-   call MPI_BCAST(S,nx*nx,MPI_DOUBLE_PRECISION,0,seg_comm,ierr)
-   call MPI_BCAST(sldet,1,MPI_DOUBLE_PRECISION,0,seg_comm,ierr)
-   call MPI_BCAST(numeigs,1,MPI_INTEGER,0,seg_comm,ierr)
+   else
+      !--- just normalize by the channel variances (don't sphere)
+      call DCOPY(nx*nx,S,1,Stmp,1)
+      call DSCAL(nx*nx,dble(0.0),S,1)
 
-   if (myrank == 0) then
-      print *, 'sphering the data ...'
-      call flush(6)
-   end if
-      
-   allocate(xtmp(nx,maxval(blk_size))); xtmp = dble(0.0);
-   do seg = 1,numsegs
-      fnum = dataseg(seg)%filenum
-      fieldsize = dataseg(seg)%lastdim
-         
-      num_blocks = fieldsize / blk_size(seg)
-      lastblocksize = mod(fieldsize,blk_size(seg))
-      do k = 1,num_blocks
-         bstrt = (k-1)*blk_size(seg) + 1
-         bstp = bstrt + blk_size(seg) - 1
-         call DSCAL(nx*blk_size(seg),dble(0.0),xtmp(:,1:blk_size(seg)),1)
-         call DGEMM('N','N',nx,blk_size(seg),nx,dble(1.0),S,nx,dataseg(seg)%data(:,bstrt:bstp),nx,dble(1.0),xtmp(:,1:blk_size(seg)),nx)
-         call DCOPY(nx*blk_size(seg),xtmp(:,1:blk_size(seg)),1,dataseg(seg)%data(:,bstrt:bstp),1)
+      sldet = dble(0.0)
+      do i = 1,nx
+         if (Stmp(i,i) .gt. dble(0.0)) then
+            S(i,i) = dble(1.0) / sqrt(Stmp(i,i))
+            sldet = sldet + dble(0.5)*log(S(i,i))
+         end if
       end do
-      if (lastblocksize .ne. 0) then
-         bstrt = num_blocks * blk_size(seg) + 1
-         bstp = bstrt + lastblocksize - 1
-         call DSCAL(nx*lastblocksize,dble(0.0),xtmp(:,1:lastblocksize),1)
-         call DGEMM('N','N',nx,lastblocksize,nx,dble(1.0),S,nx,dataseg(seg)%data(:,bstrt:bstp),nx,dble(1.0),xtmp(:,1:lastblocksize),nx)
-         call DCOPY(nx*lastblocksize,xtmp(:,1:lastblocksize),1,dataseg(seg)%data(:,bstrt:bstp),1)
-      end if
-   end do
-   deallocate(xtmp)
-   nw = numeigs
-else
-   if (myrank == 0) then
-      print *, 'getting the channel variances ...'; call flush(6)
+      numeigs = nx
    end if
-
-   call DSCAL(nx*nx,dble(0.0),Stmp,1)
-      
-   cnt1 = 0
-   do seg = 1,numsegs
-      fnum = dataseg(seg)%filenum
-      fieldsize = dataseg(seg)%lastdim
-      ldim = dataseg(seg)%lastdim
-         
-      num_blocks = fieldsize / blk_size(seg)
-      lastblocksize = mod(fieldsize,blk_size(seg))
-      do k = 1,num_blocks
-         bstrt = (k-1)*blk_size(seg) + 1
-         bstp = bstrt + blk_size(seg) - 1
-         call DSYRK('L','N',nx,blk_size(seg),dble(1.0),dataseg(seg)%data(:,bstrt:bstp),nx,dble(1.0),Stmp,nx)
-      end do
-      if (lastblocksize .ne. 0) then
-         bstrt = num_blocks*blk_size(seg) + 1
-         bstp = ldim
-         call DSYRK('L','N',nx,lastblocksize,dble(1.0),dataseg(seg)%data(:,bstrt:bstp),nx,dble(1.0),Stmp,nx)
-      end if
-      cnt1 = cnt1 + fieldsize
-         
-   end do
-   call DSCAL(nx*nx,dble(0.0),S,1)
-   cnt = 0
-   call MPI_ALLREDUCE(Stmp,S,nx*nx,MPI_DOUBLE_PRECISION,MPI_SUM,seg_comm,ierr)
-   call MPI_ALLREDUCE(cnt1,cnt,1,MPI_INTEGER,MPI_SUM,seg_comm,ierr)
-   
-   call DSCAL(nx*nx,dble(1.0)/dble(cnt),S,1)
-
-   call DSCAL(nx*nx,dble(0.0),Stmp,1)
-   sldet = dble(0.0)
-   do i = 1,nx
-      Stmp(i,i) = dble(1.0) / sqrt(S(i,i))
-      sldet = sldet - dble(0.5)*log(S(i,i))
-   end do
-   call DCOPY(nx*nx,Stmp,1,S,1)
-   if (myrank == 0) then
-      print *, 'normalizing the channel variances ...'; call flush(6)
-      call flush(6)
-   end if
-      
-   allocate(xtmp(nx,maxval(blk_size))); xtmp = dble(0.0)
-   do seg = 1,numsegs
-      fnum = dataseg(seg)%filenum
-      fieldsize = dataseg(seg)%lastdim
-         
-      num_blocks = fieldsize / blk_size(seg)
-      lastblocksize = mod(fieldsize,blk_size(seg))
-      do k = 1,num_blocks
-         bstrt = (k-1)*blk_size(seg) + 1
-         bstp = bstrt + blk_size(seg) - 1
-         call DSCAL(nx*blk_size(seg),dble(0.0),xtmp(:,1:blk_size(seg)),1)
-         call DGEMM('N','N',nx,blk_size(seg),nx,dble(1.0),S,nx,dataseg(seg)%data(:,bstrt:bstp),nx,dble(1.0),xtmp(:,1:blk_size(seg)),nx)
-         call DCOPY(nx*blk_size(seg),xtmp(:,1:blk_size(seg)),1,dataseg(seg)%data(:,bstrt:bstp),1)
-      end do
-      if (lastblocksize .ne. 0) then
-         bstrt = num_blocks * blk_size(seg) + 1
-         bstp = bstrt + lastblocksize - 1
-         call DSCAL(nx*lastblocksize,dble(0.0),xtmp(:,1:lastblocksize),1)
-         call DGEMM('N','N',nx,lastblocksize,nx,dble(1.0),S,nx,dataseg(seg)%data(:,bstrt:bstp),nx,dble(1.0),xtmp(:,1:lastblocksize),nx)
-         call DCOPY(nx*lastblocksize,xtmp(:,1:lastblocksize),1,dataseg(seg)%data(:,bstrt:bstp),1)
-      end if
-   end do
-   deallocate(xtmp)
-
-   nw = nx
 end if
+
+if (myrank == 0) then
+   print *, 'sphering the data ...'
+   call flush(6)
+end if
+
+call MPI_BCAST(S,nx*nx,MPI_DOUBLE_PRECISION,0,seg_comm,ierr)
+call MPI_BCAST(sldet,1,MPI_DOUBLE_PRECISION,0,seg_comm,ierr)
+call MPI_BCAST(numeigs,1,MPI_INTEGER,0,seg_comm,ierr)
+
+allocate(xtmp(nx,maxval(blk_size))); xtmp = dble(0.0);
+do seg = 1,numsegs
+   fnum = dataseg(seg)%filenum
+   fieldsize = dataseg(seg)%lastdim
+
+   num_blocks = fieldsize / blk_size(seg)
+   lastblocksize = mod(fieldsize,blk_size(seg))
+   do k = 1,num_blocks
+      bstrt = (k-1)*blk_size(seg) + 1
+      bstp = bstrt + blk_size(seg) - 1
+      call DSCAL(nx*blk_size(seg),dble(0.0),xtmp(:,1:blk_size(seg)),1)
+      call DGEMM('N','N',nx,blk_size(seg),nx,dble(1.0),S,nx,dataseg(seg)%data(:,bstrt:bstp),nx,dble(1.0),xtmp(:,1:blk_size(seg)),nx)
+      call DCOPY(nx*blk_size(seg),xtmp(:,1:blk_size(seg)),1,dataseg(seg)%data(:,bstrt:bstp),1)
+   end do
+   if (lastblocksize .ne. 0) then
+      bstrt = num_blocks * blk_size(seg) + 1
+      bstp = bstrt + lastblocksize - 1
+      call DSCAL(nx*lastblocksize,dble(0.0),xtmp(:,1:lastblocksize),1)
+      call DGEMM('N','N',nx,lastblocksize,nx,dble(1.0),S,nx,dataseg(seg)%data(:,bstrt:bstp),nx,dble(1.0),xtmp(:,1:lastblocksize),nx)
+      call DCOPY(nx*lastblocksize,xtmp(:,1:lastblocksize),1,dataseg(seg)%data(:,bstrt:bstp),1)
+   end if
+end do
+deallocate(xtmp)
+nw = numeigs
+
+
 if (seg_rank == 0) then
    ! get the pseudoinverse of S
    call DCOPY(nx*nx,S,1,Stmp2,1)
@@ -601,15 +555,7 @@ if (seg_rank == 0) then
    end do
    call DGEMM('T','T',nx,numeigs,numeigs,dble(1.0),sVtmp,numeigs,sUtmp,numeigs,dble(0.0),Spinv,nx)
 
-   allocate(Spinv2(numeigs,numeigs)); Spinv2 = dble(0.0)
-   do i = 1,numeigs
-      sUtmp(:,i) = sUtmp(:,i) / eigs(i)
-   end do
-   call DGEMM('N','T',numeigs,numeigs,numeigs,dble(1.0),sUtmp,numeigs,sUtmp,numeigs,dble(0.0),Spinv2,numeigs)
 end if
-
-
-call MPI_BCAST(S,nx*nx,MPI_DOUBLE_PRECISION,0,seg_comm,ierr)
 
 if (seg_rank == 0 .and. print_debug) then
    print *, 'S = '; call flush(6)
@@ -627,7 +573,7 @@ if (num_comps .eq. -1) then
    num_comps = nw * num_models
 end if
 
-print *, myrank + 1, 'Allocating variables ...'; call flush(6) 
+print *, myrank + 1, ': Allocating variables ...'; call flush(6) 
 
 
 allocate( Dtemp (num_models),stat=ierr); call tststat(ierr); Dtemp = dble(0.0)
@@ -1154,7 +1100,7 @@ do
       !print *, myrank+1, ': calling do_updates ....'; call flush(6)
       call update_params
       
-      if (mod(iter,writestep) == 0) then
+      if ((writestep .ge. 0) .and. mod(iter,writestep) == 0) then
          !print *, myrank+1, ': calling write_output ...'; call flush(6)
          call write_output
       end if
@@ -1170,7 +1116,7 @@ do
    end if
 end do !iter
 
-!call write_output
+call write_output
 
 call MPI_BCAST(tot_procs,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
 call MPI_FINALIZE(ierr)
@@ -3476,14 +3422,6 @@ subroutine get_cmd_args
            do_approx_sphere = .false.
         end if
         print *, 'do_approx_sphere = ', k; call flush(6)
-     case('doPCA')
-        read(tmparg,'(i12)') k
-        if (k == 1) then
-           doPCA = .true.
-        else
-           doPCA = .false.
-        end if
-        print *, 'doPCA = ', k; call flush(6)
      case('pcakeep')
         read(tmparg,'(i12)') pcakeep
         print *, 'pcakeep = ', pcakeep; call flush(6)
