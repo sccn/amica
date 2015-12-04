@@ -3,7 +3,9 @@ program main
 !#define MKL
 
 use funmod2
-!use mpi
+#ifndef MKL
+use mpi
+#endif
 
 implicit none
 intrinsic count
