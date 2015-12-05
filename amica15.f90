@@ -15,9 +15,10 @@ intrinsic cmplx
 
 include 'amica15_header.f90'
 
-include 'mpif.h'
+
 
 #ifdef MKL
+include 'mpif.h'
 include 'mkl_vml.f90'
 #endif
 
