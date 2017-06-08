@@ -29,11 +29,11 @@ TO COMPILE WITH INTEL FORTRAN ON MAC
    
 4. Test:
 
-   i) Download Sample EEG Data (Memorize.fdt and amicadefs.param) from:
+   >i) Download Sample EEG Data (Memorize.fdt and amicadefs.param) from:
    
-   https://sccn.ucsd.edu/~jason/amica_web.html
+   >https://sccn.ucsd.edu/~jason/amica_web.html
    
-   ii) Test binary:
+   >ii) Test binary:
    
          $ ./amica15mac ./amicadefs.param
 
