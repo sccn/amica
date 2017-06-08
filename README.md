@@ -11,7 +11,7 @@ TO COMPILE WITH INTEL FORTRAN ON WINDOWS
 
 4. Compile Amica with command like (/F sets the stack size):
 
-         > ifort   /Qopenmp /Qmkl  /F2147483648 /DMKL /fpp  /O3  /exe:amica15mkl.exe  funmod2.f90 amica15.f90 fmpich2.lib
+         > ifort /Qopenmp /Qmkl /F2147483648 /DMKL /fpp  /O3 /exe:amica15mkl.exe funmod2.f90 amica15.f90 fmpich2.lib
 
 5. Test:
 
