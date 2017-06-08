@@ -23,7 +23,7 @@ TO COMPILE WITH INTEL FORTRAN ON UBUNTU
 
 1. Install Intel Fortran compiler for Linux.
 2. Compile MPICH2 setting environmental vars CC, CXX, FC, and F77 to icc and ifort.
-3. Compile Amica with command like:
+3. Compile Amica with the command:
 
          $ /home/jason/mpich2-3.2-install/bin/mpif90 -I/opt/intel/mkl/include/ -fpp -qopenmp -O3 -mkl -static -static-intel -DMKL funmod2.f90 amica15.f90 -o amica15ub
 
@@ -61,8 +61,7 @@ TO COMPILE WITH INTEL FORTRAN ON MAC
    
 4. Test:
 
-   i) Download Sample EEG Data (Memorize.fdt and amicadefs.param) from:      
-      https://sccn.ucsd.edu/~jason/amica_web.html
+   i) Download Sample EEG Data (Memorize.fdt and amicadefs.param) from: https://sccn.ucsd.edu/~jason/amica_web.html
       
    ii) Test binary:
    
