@@ -33,13 +33,25 @@ TO COMPILE WITH INTEL FORTRAN ON UBUNTU
 
 TO COMPILE WITH INTEL FORTRAN ON MAC
 
-1. Install Intel Fortran compiler for Mac/Linux.
-2. Compile MPICH2 setting environmental vars CC, CXX, FC, and F77 to icc and ifort.
+1. Install Intel Fortran compiler for Mac/Linux (free demo).
+   See https://software.intel.com/en-us/intel-parallel-studio-xe
+
+2. Compile MPICH2 setting environmental vars CC, CXX, FC, and F77 to icc and ifort. Set $FBIN to Intel Fortran bin directory.
+   $ setenv CC $FBIN/icc
+   $ setenv CXX $FBIN/icc
+   $ setenv F77 $FBIN/ifort
+   $ setenv FC $FBIN/ifort
+   $ tar xvf mpich-3.2.tar.gz
+   $ cd mpich-3.2
+   $ ./configure --prefix=/Users/$USER/mpich-3.2-install
+   $ make
+   $ make install
+
 3. Compile Amica with command like:
-
-   $ ~/mpich-3.2-install/bin/mpif90 -L/Users/jason/mpich-3.2-install/lib/ -I/Users/jason/mpich-3.2-install/include/ -qopenmp -mkl -static-intel -O3 -fpp -DMKL amica15.f90 funmod2.f90 -o amica15mac
-   
-
-4. Test:
-
-   $ ./amica15mac ./amicadefs.param
+   $ ~/mpich-3.2-install/bin/mpif90 -L/Users/$USER/mpich-3.2-install/lib/ -I/Users/$USER/mpich-3.2-install/include/ -qopenmp -mkl -static-intel -O3 -fpp -DMKL amica15.f90 funmod2.f90 -o amica15mac
+   
+4. Test
+   i) Download Sample EEG Data (Memorize.fdt and amicadefs.param) from:
+      https://sccn.ucsd.edu/~jason/amica_web.html
+   ii) Test binary:
+      $ ./amica15mac ./amicadefs.param
