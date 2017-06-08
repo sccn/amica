@@ -37,14 +37,23 @@ TO COMPILE WITH INTEL FORTRAN ON MAC
    See https://software.intel.com/en-us/intel-parallel-studio-xe
 
 2. Compile MPICH2 setting environmental vars CC, CXX, FC, and F77 to icc and ifort. Set $FBIN to Intel Fortran bin directory.
+
    $ setenv CC $FBIN/icc
+
    $ setenv CXX $FBIN/icc
+   
    $ setenv F77 $FBIN/ifort
+   
    $ setenv FC $FBIN/ifort
+   
    $ tar xvf mpich-3.2.tar.gz
+   
    $ cd mpich-3.2
+   
    $ ./configure --prefix=/Users/$USER/mpich-3.2-install
+   
    $ make
+   
    $ make install
 
 3. Compile Amica with command like:
