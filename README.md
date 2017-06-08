@@ -25,15 +25,15 @@ TO COMPILE WITH INTEL FORTRAN ON MAC
 
 3. Compile Amica with the command:
 
+   i) a
+
          $ ~/mpich-3.2-install/bin/mpif90 -L/Users/$USER/mpich-3.2-install/lib/ -I/Users/$USER/mpich-3.2-install/include/ -qopenmp -mkl -static-intel -O3 -fpp -DMKL amica15.f90 funmod2.f90 -o amica15mac
    
 4. Test:
 
-   >i) Download Sample EEG Data (Memorize.fdt and amicadefs.param) from:
+   i) Download Sample EEG Data (Memorize.fdt and amicadefs.param) from: https://sccn.ucsd.edu/~jason/amica_web.html
    
-   >https://sccn.ucsd.edu/~jason/amica_web.html
-   
-   >ii) Test binary:
+   ii) Test binary:
    
          $ ./amica15mac ./amicadefs.param
 
