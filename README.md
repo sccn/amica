@@ -25,10 +25,8 @@ TO COMPILE WITH INTEL FORTRAN ON MAC
 
 3. Compile Amica with the command:
 
-   i) a
+         $ ~/mpich-3.2-install/bin/mpif90 -L/Users/$USER/mpich-3.2-install/lib/ -I/Users/$USER/mpich-3.2-install/include/ -qopenmp -mkl -static-intel -O3 -fpp -DMKL amica15.f90 funmod2.f90 -o amica15mac
 
-         $ ~/mpich-3.2-install/bin/mpif90 -L/Users/$USER/mpich-3.2-install/lib/ -I/Users/$USER/mpich-3.2-install/include/ -qopenmp -mkl -static-intel -O3 -fpp -DMKL amica15.f90 funmod2.f90 -o amica15mac
-   
 4. Test:
 
    i) Download Sample EEG Data (Memorize.fdt and amicadefs.param) from: https://sccn.ucsd.edu/~jason/amica_web.html
@@ -39,7 +37,7 @@ TO COMPILE WITH INTEL FORTRAN ON MAC
 
 
 
-TO COMPILE WITH INTEL FORTRAN ON WINDOWS
+\BTO COMPILE WITH INTEL FORTRAN ON WINDOWS
 
 1. Install Intel Fortran compiler for Windows.
 2. Install MPICH2 library (fmpich2.lib) for Windows.
@@ -47,7 +45,7 @@ TO COMPILE WITH INTEL FORTRAN ON WINDOWS
 
          > "c:\Program Files (x86)\Intel\Composer XE 2011 SP1\bin\compilervars.bat" intel64
 
-4. Compile Amica with command like (/F sets the stack size):
+4. Compile Amica with the command (/F sets the stack size):
 
          > ifort /Qopenmp /Qmkl /F2147483648 /DMKL /fpp  /O3 /exe:amica15mkl.exe funmod2.f90 amica15.f90 fmpich2.lib
 
