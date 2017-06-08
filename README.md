@@ -43,8 +43,7 @@ TO COMPILE WITH INTEL FORTRAN ON MAC
    
    ii) Compile mpich-3.2:
    
-         $ cp /Users/$USER/downloads/mpich-3.2.tar.gz .
-   
+         $ cp /Users/$USER/downloads/mpich-3.2.tar.gz .   
          $ setenv CC $FBIN/icc
 
          $ setenv CXX $FBIN/icc
