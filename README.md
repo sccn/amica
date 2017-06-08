@@ -42,24 +42,26 @@ TO COMPILE WITH INTEL FORTRAN ON MAC
    i) Download the mpich-3.2 code from: http://www.mpich.org/static/downloads/3.2/mpich-3.2.tar.gz
    
    ii) Compile mpich-3.2:
+   
+         $ cp /Users/$USER/downloads/mpich-3.2.tar.gz .
+   
+         $ setenv CC $FBIN/icc
 
-      $ setenv CC $FBIN/icc
-
-      $ setenv CXX $FBIN/icc
+         $ setenv CXX $FBIN/icc
    
-      $ setenv F77 $FBIN/ifort
+         $ setenv F77 $FBIN/ifort
    
-      $ setenv FC $FBIN/ifort
+         $ setenv FC $FBIN/ifort
    
-      $ tar xvf mpich-3.2.tar.gz
+         $ tar xvf mpich-3.2.tar.gz
    
-      $ cd mpich-3.2
+         $ cd mpich-3.2
    
-      $ ./configure --prefix=/Users/$USER/mpich-3.2-install
+         $ ./configure --prefix=/Users/$USER/mpich-3.2-install
    
-      $ make
+         $ make
    
-      $ make install
+         $ make install
 
 3. Compile Amica with the command:
 
