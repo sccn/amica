@@ -1,7 +1,7 @@
 % runamica15() - Perform AMICA -- adaptive ICA using multiple models with shared components
 %
 % Usage:
-%         >> [weights,sphere,mods] = runamica12(dat,'Key1',Value1,...);
+%         >> [weights,sphere,mods] = runamica15(dat,'Key1',Value1,...);
 %
 % Inputs:
 %
@@ -16,7 +16,7 @@
 %
 %   weights        weights matrix (num_pcs x num_pcs)
 %   sphere         sphering matrix (num_pcs x chans)
-%   mods           output model data structure, see help loadmodout12()
+%   mods           output model data structure, see help loadmodout15()
 %
 % Optional keyword inputs:
 %
@@ -83,14 +83,14 @@
 %   
 %   To load output use the function loadmodout() after job ends:
 %                         
-%       mods = loadmodout12(outdir);
+%       mods = loadmodout15(outdir);
 %
 %   mods is a structure containing the output components and density models. mods.A(:,:,h) is the components for model h.
 %   mods.varord(:,h) is the index order of the components in variance order, mods.Lht is the likelihood of time
 %   points for each model (if set), mods.LL is the history of the log likelihood over iterations, mods.c(:,h)
 %   is the center for model h, mods.W(:,:,h) is the unmixing matrix for model h, and mods.S is the sphering matrix.
 %                       
-% See also: loadmodout12()
+% See also: loadmodout15(), eeg_loadamica(), pop_runamica15()
 %
 %
 
@@ -98,6 +98,8 @@ function [weights,sphere,mods] = runamica15(dat,varargin)
 
 if ispc
     binfile = 'amica15mkl.exe'; % on computing
+elseif ismac
+    binfile = 'amica15mac';
 else
     binfile = 'amica15c';
 end
@@ -108,6 +110,10 @@ if exist([basepath binfile],'file')
 elseif exist(binfile,'file')
     AMBIN = which(binfile);
 end
+if ismac
+    system(['chmod 777 ' AMBIN]);
+end
+
 
 %MPI_BIN = '/opt/openmpi/bin/';
 %MPI_BIN = '/opt/mpich2/gnu/bin/';
@@ -856,10 +862,33 @@ fprintf(fid,'doscaling %d\n',doscaling);
 fprintf(fid,'scalestep %d\n',scalestep);
 fclose(fid);
 
+
+if numprocs > 1
+    RUN_LOCALLY = 0;
+end
 if RUN_LOCALLY == 1
 
+    tic;
     system([AMBIN ' ' outdir 'input.param']);
-    mods = loadmodout12(outdir);
+    t = toc;
+    if t < 2 
+        if ispc
+            p = fileparts(which('runamica15'));
+            mydlg = warndlg( [ 'Before running AMICA, you need to install the MPI librairy' 10 ...
+                        fullfile(p, 'mpich2-1.4-win-x86-64.msi') 10 ...
+                        '(tf your computer is using 32-bit arthitecture, go to ' ...
+                        'this folder and select the 32-bit version). Press' ...
+                        'OK to install the missing library now...' ], 'Amica warning', 'modal');
+            waitfor(mydlg);
+
+            system(fullfile(p, 'mpich2-1.4-win-x86-64.msi'));
+            system([AMBIN ' ' outdir 'input.param']);
+        else
+            disp('Something went wrong...');
+        end
+    end
+            
+    mods = loadmodout15(outdir);
     weights = mods.W(:,:,1);
     sphere = mods.S(1:mods.num_pcs,:);
     if isnumeric(dat)
@@ -872,7 +901,7 @@ else % ----=============--------========---------======-------==========-===-=-=
 
     system(['ssh `qconf -ss` -n ' MPI_BIN 'mpirun -np ' int2str(numprocs) ' -machinefile ' basepath 'machines ' ...
         AMBIN ' ' outdir 'input.param']);
-    mods = loadmodout12(outdir);
+    mods = loadmodout15(outdir);
     weights = mods.W(:,:,1);
     sphere = mods.S(1:mods.num_pcs,:);
 

@@ -58,13 +58,14 @@
 
 
 function EEG = pop_runamica(EEG)
+%global EEG
 global blocksize do_opt_block blk_min blk_step blk_max setblk;
 global do_sphere mineig setsph;
 global do_reject rejsig numrej rejstart rejint setrej;
 global num_mix_comps setmod;
 global maxiter use_min_dll min_dll use_grad_norm min_grad_norm setstop;
 global lrate do_newton newt_start do_history histstep writestep setlrat;
-global numprocs machinefile setmpi
+global numprocs machinefile setmpi dompi
 
 basepath = [fileparts(mfilename('fullpath')) filesep]; % directory where this .m file is located
 
@@ -77,8 +78,9 @@ setstop = 0;
 setblk = 0;
 setlrat = 0;
 setmpi = 0;
+dompi = 0;
 
-spheredlg = 'global do_sphere mineig setsph'; 
+spheredlg = 'global do_sphere mineig setsph;'; 
 spheredlg = [spheredlg 'sphres = inputgui(''geometry'',{ [0.5 1.5], [0.5 0.5 1] },''uilist'',{'];
 spheredlg = [spheredlg '{''style'' ''text'' ''string'' ''Pre-processing:''},'];
 spheredlg = [spheredlg '{''style'' ''popupmenu'' ''string'' ''Symm. sphering (approx. if reduced rank)|Princ. Comps (Eigenvectors)|No sphering trans''},'];
@@ -106,7 +108,8 @@ modeldlg = [modeldlg '{''style'' ''text'' ''string'' ''Num mix pdf:''},'];
 modeldlg = [modeldlg '{''style'' ''edit'' ''string'' ''3''} });'];
 modeldlg = [modeldlg 'num_mix_comps = str2num(modres{1}); setmod = 1;'];
 
-stoppingdlg = 'stopres = inputgui(''geometry'',{ [1 1], [1 1], [1 1] },''uilist'',{';
+stoppingdlg = 'global maxiter use_min_dll min_dll use_grad_norm min_grad_norm setstop;';
+stoppingdlg = [stoppingdlg 'stopres = inputgui(''geometry'',{ [1 1], [1 1], [1 1] },''uilist'',{'];
 stoppingdlg = [stoppingdlg '{''style'' ''text'' ''string'' ''Maximum iterartions:''},'];
 stoppingdlg = [stoppingdlg '{''style'' ''edit'' ''string'' ''2000''},'];
 stoppingdlg = [stoppingdlg '{''style'' ''checkbox'' ''string'' ''Min gradient norm:'' ''value'' 1},'];
@@ -144,7 +147,7 @@ blockdlg = [blockdlg '{''style'' ''edit'' ''string'' ''1024''} });'];
 blockdlg = [blockdlg 'blocksize = str2num(blockres{1}); do_opt_block = blockres{2}; blk_min = str2num(blockres{3});'];
 blockdlg = [blockdlg 'blk_step = str2num(blockres{4}); blk_max = str2num(blockres{5}); setblk = 1;'];
 
-mpidlg = 'global numprocs machinefile setmpi;';
+mpidlg = 'global numprocs machinefile setmpi dompi;';
 mpidlg = [mpidlg 'mpires = inputgui(''geometry'',{ [1 3], [1 3], [1 1 2]},''uilist'',{'];
 mpidlg = [mpidlg '{''style'' ''checkbox'' ''string'' ''Use MPI -- Location:'' ''value'' 0},'];
 mpidlg = [mpidlg '{''style'' ''edit'' ''string'' ''$MPI_BIN''},'];
@@ -152,7 +155,7 @@ mpidlg = [mpidlg '{''style'' ''text'' ''string'' ''Host file:''},'];
 mpidlg = [mpidlg '{''style'' ''edit'' ''string'' [fileparts(which(''pop_runamica'')) filesep ''machines'']},'];
 mpidlg = [mpidlg '{''style'' ''text'' ''string'' ''Number of Nodes:''},'];
 mpidlg = [mpidlg '{''style'' ''edit'' ''string'' ''4''} {}});'];
-mpidlg = [mpidlg 'if mpires{1} MPI_BIN = mpires{2}, else RUN_LOCALLY = 1, end; machinefile = mpires{3}, numprocs = str2num(mpires{4}),'];
+mpidlg = [mpidlg 'dompi = mpires{1}; if mpires{1} MPI_BIN = mpires{2}; RUN_LOCALLY = 0; else RUN_LOCALLY = 1, end; machinefile = mpires{3}, numprocs = str2num(mpires{4}),'];
 mpidlg = [mpidlg 'fid = fopen(machinefile,''r''); clear mchs; k=1; while 1 str = fgetl(fid); if ~ischar(str) break; else mchs{k} = str; k=k+1;end; end; fclose(fid);'];
 mpidlg = [mpidlg 'mchs{1:numprocs}; setmpi = 1;'];
 %mpidlg = [mpidlg 'ld = getloads(mchs); [mk,ord]=sort(ld); mchs{1:numprocs}'];
@@ -217,7 +220,7 @@ if setmod
     arglist = {arglist{:},'num_mix_comps',num_mix_comps};
 end
 if setstop
-    arglist = {arglist{:},'maxiter',maxiter,'use_grad_norm',use_grad_norm,'min_grad_norm',min_grad_norm,...
+    arglist = {arglist{:},'max_iter',maxiter,'use_grad_norm',use_grad_norm,'min_grad_norm',min_grad_norm,...
         'use_min_dll',use_min_dll,'min_dll',min_dll};
 end
 if setlrat
@@ -227,17 +230,19 @@ end
 if setblk
     arglist = {arglist{:},'block_size',blocksize,'do_opt_block',do_opt_block,'blk_min',blk_min,'blk_step',blk_step,'blk_max',blk_max};
 end
-if setmpi
-    arglist = {arglist{:},'numprocs',numprocs,'machinefile',machinefile};
+if setmpi && dompi
+    arglist = {arglist{:},'numprocs',numprocs}; %,'machinefile',machinefile};
 end
 
-arglist
 if isfield(EEG,'datfile') && length(EEG.datfile) > 0
     disp('Found datfile');
-    runamica15(datfile,arglist{:});
+    [W,S,mods] = runamica15(datfile,arglist{:});
 else
     disp('No datfile field found in EEG structure. Will write temp file.');
-    runamica15(EEG.data(:,:),arglist{:});
-end        
-        
-        
+    [W,S,mods] = runamica15(EEG.data(:,:),arglist{:});
+end
+
+EEG.icaweights = W;
+EEG.icasphere = S(1:size(W,1),:);
+EEG.icawinv = mods.A(:,:,1);
+EEG.mods = mods;
