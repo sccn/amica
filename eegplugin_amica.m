@@ -43,7 +43,8 @@
 
 function vers = eegplugin_amica(fig, trystrs, catchstrs)
     
-    vers = 'amica1.0';
+    %global EEG
+    vers = 'amica1.5.1';
     if nargin < 3
         error('eegplugin_amica requires 3 arguments');
     end;
@@ -75,7 +76,8 @@ function vers = eegplugin_amica(fig, trystrs, catchstrs)
     
     % create menus
     % ------------
-    submenu = uimenu( menu, 'Label', 'Run AMICA', 'separator', 'on', 'CallBack', 'pop_runamica(EEG)');
+    submenu = uimenu( menu, 'Label', 'Run AMICA', 'separator', 'on', 'CallBack', ...
+        'EEG = pop_runamica(EEG);[ALLEEG EEG CURRENTSET] = eeg_store(ALLEEG,EEG,CURRENTSET);eeglab redraw');
     %submenu = uimenu( menu, 'Label', 'Run AMICA', 'separator', 'on');
     %uimenu( submenu, 'Label', 'Run AMICA in parallel'  , 'CallBack', comrun);
     %uimenu( submenu, 'Label', 'Run AMICA locally'      , 'CallBack', comrunloc);

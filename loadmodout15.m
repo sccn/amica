@@ -1,5 +1,5 @@
-function modout = loadmodout12(outdir)
-% function mod = loadmodout12(outdir)
+function modout = loadmodout15(outdir)
+% function mod = loadmodout15(outdir)
 %
 % Load the output of AMICA from outdir.
 %
