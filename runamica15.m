@@ -74,7 +74,7 @@
 %   load_param          flag to load parameters, def=0
 %   do_mean             flag to remove mean from data, def=1
 %   do_sphere           flag to sphere data before ica, def=1
-%   doPCA               flag to to PCA dimensionalit reduction, def=0
+%   doPCA               flag to to PCA dimensionality reduction, def=1
 %   pcakeep             for PCA reduction, number of components to keep, def=chans
 %   doscaling           flag to rescale unmixing matrix rows to unit norm, def=1
 %   scalestep           iteration interval at which to rescale unmixing rows, def=1
