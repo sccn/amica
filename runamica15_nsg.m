@@ -763,7 +763,9 @@ end
 if isnumeric(dat)
     filename = ['tmpdata' num2str(round(rand(1)*100000)) '.fdt' ];
     disp(['Writing data file: ' fullfile(pwd,filename)]);
-    floatwrite(dat, fullfile(pwd, filename));
+    fid = fopen(filename, 'w');
+    fwrite(fid, dat, 'float');
+    fclose(fid)
     chans = size(dat,1);
     frames = size(dat,2);
     file = fullfile(pwd,filename);
