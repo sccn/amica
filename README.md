@@ -1,6 +1,8 @@
 # Amica
 Code for AMICA: Adaptive Mixture ICA with shared component
 
+Refer to the [Amica wiki](https://github.com/japalmer29/amica/wiki) for documentation.
+
 TO COMPILE WITH INTEL FORTRAN ON MAC
 
 1. Install Intel Fortran compiler for Mac/Linux (free demo).
