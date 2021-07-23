@@ -67,7 +67,7 @@ Refer to the [Amica wiki](https://github.com/japalmer29/amica/wiki) for document
 
 ## VERSION HISTORY
 
-1.5.3 - Deprecate Comet and replace with Expanse supercomputer executable
+1.6 - Deprecate Comet and replace with Expanse supercomputer executable
 
 1.5.2 - Comet supercomputer executable
 

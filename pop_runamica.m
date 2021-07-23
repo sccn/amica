@@ -137,7 +137,7 @@ try g.blk_step;         g.setblk = 1;   catch, g.blk_step      = 256;           
 try g.blk_max;          g.setblk = 1;   catch, g.blk_max       = 1024;          end;
 
 try g.dompi;            g.setmpi = 1;   catch, g.dompi         = 0;             end;
-try g.numprocs;         g.setmpi = 1;   catch, g.numprocs      = 8;             end; 
+try g.numprocs;         g.setmpi = 1;   catch, g.numprocs      = 1;             end; 
 try g.machinefile;      g.setmpi = 1;   catch, g.machinefile   = machinefile;   end;
 
 if nargin == 1
