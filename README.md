@@ -3,7 +3,7 @@ Code for AMICA: Adaptive Mixture ICA with shared component
 
 Refer to the [Amica wiki](https://github.com/japalmer29/amica/wiki) for documentation.
 
-TO COMPILE WITH INTEL FORTRAN ON MAC
+## TO COMPILE WITH INTEL FORTRAN ON MAC
 
 1. Install Intel Fortran compiler for Mac/Linux (free demo).
    See https://software.intel.com/en-us/intel-parallel-studio-xe
@@ -37,9 +37,7 @@ TO COMPILE WITH INTEL FORTRAN ON MAC
    
          $ ./amica15mac ./amicadefs.param
 
-
-
-TO COMPILE WITH INTEL FORTRAN ON WINDOWS
+## TO COMPILE WITH INTEL FORTRAN ON WINDOWS
 
 1. Install Intel Fortran compiler for Windows.
 2. Install MPICH2 library (fmpich2.lib) for Windows.
@@ -55,9 +53,7 @@ TO COMPILE WITH INTEL FORTRAN ON WINDOWS
 
          > .\amica15mkl.exe .\amicadefs.param
 
-
-
-TO COMPILE WITH INTEL FORTRAN ON UBUNTU
+## TO COMPILE WITH INTEL FORTRAN ON UBUNTU
 
 1. Install Intel Fortran compiler for Linux.
 2. Compile MPICH2 setting environmental vars CC, CXX, FC, and F77 to icc and ifort.
@@ -68,4 +64,10 @@ TO COMPILE WITH INTEL FORTRAN ON UBUNTU
 4. Test:
 
          $ ./amica15ub ./amicadefs.param
+
+## VERSION HISTORY
+
+1.5.2 - Deprecate Comet and replace with Expanse supercomputer executable
+
+1.5.1 - Comet supercomputer executable
 

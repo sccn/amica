@@ -101,7 +101,8 @@ if ispc
 elseif ismac
     binfile = 'amica15mac';
 else
-    binfile = 'amica15c';
+    disp('Using Unix executable for Expanse supercomputer, you may need to recompile if you encounter librairy errors');
+    binfile = 'amica15ex';
 end
 bytesize = 4; % not used
 basepath = [fileparts(mfilename('fullpath')) filesep]; % directory where this .m file is located
