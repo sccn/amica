@@ -64,6 +64,27 @@ Refer to the [Amica wiki](https://github.com/japalmer29/amica/wiki) for document
 4. Test:
 
          $ ./amica15ub ./amicadefs.param
+         
+## TO COMPILE ON EXPANSE SUPERCOMPUTER
+
+1. load appropriate modules:
+
+module purge
+module load cpu
+module load intel
+module load intel-mkl
+module load mvapich2
+
+mpif90 -static-intel -fpp -O3 -march=core-avx2 -heap-arrays \
+       -qopenmp -mkl -DMKL -o amica15ex funmod2.f90 amica15.f90
+
+2. Compile Amica with the command:
+
+mpif90 -static-intel -fpp -O3 -march=core-avx2 -heap-arrays \
+       -qopenmp -mkl -DMKL -o amica15ex funmod2.f90 amica15.f90
+
+3. Test:
+        $ ./amica15ex ./amicadefs.param
 
 ## VERSION HISTORY
 
