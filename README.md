@@ -69,6 +69,7 @@ Refer to the [Amica wiki](https://github.com/japalmer29/amica/wiki) for document
 
 1. load appropriate modules:
 
+```
    module purge
    module load cpu
    module load intel
@@ -77,14 +78,19 @@ Refer to the [Amica wiki](https://github.com/japalmer29/amica/wiki) for document
 
    mpif90 -static-intel -fpp -O3 -march=core-avx2 -heap-arrays \
        -qopenmp -mkl -DMKL -o amica15ex funmod2.f90 amica15.f90
+```
 
 2. Compile Amica with the command:
 
+```
    mpif90 -static-intel -fpp -O3 -march=core-avx2 -heap-arrays \
        -qopenmp -mkl -DMKL -o amica15ex funmod2.f90 amica15.f90
+```
 
 3. Test:
-        $ ./amica15ex ./amicadefs.param
+```
+   $ ./amica15ex ./amicadefs.param
+```
 
 ## VERSION HISTORY
 
