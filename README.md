@@ -43,7 +43,7 @@ Refer to the [Amica wiki](https://github.com/japalmer29/amica/wiki) for document
 2. Install Intel OneAPI HPC Toolkit for Windows.
 3. Open Intel OneAPI command window (in Start menu, 32 or 64 bit as appropriate) and compile Amica with the command (/F sets the stack size):
 
-         > mpif90 /Qopenmp /Qmkl /F2147483648 /DMKL /fpp  /O3 /exe:amica15mkl.exe funmod2.f90 amica15.f90
+         > mpif90 /Qopenmp /Qmkl /F2147483648 /DMKL /fpp /O3 /exe:amica15mkl.exe funmod2.f90 amica15.f90
 
 4. Test:
 
