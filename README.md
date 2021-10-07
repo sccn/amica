@@ -39,19 +39,17 @@ Refer to the [Amica wiki](https://github.com/japalmer29/amica/wiki) for document
 
 ## TO COMPILE WITH INTEL FORTRAN ON WINDOWS
 
-1. Install Intel Fortran compiler for Windows.
-2. Install MPICH2 library (fmpich2.lib) for Windows.
-3. In a cmd.exe windows: Run compilervars.bat with argument (e.g. intel64): 
+1. Install Intel OneAPI Base Toolkit for Windows.
+2. Install Intel OneAPI HPC Toolkit for Windows.
+3. Open Intel OneAPI command window (in Start menu, 32 or 64 bit as appropriate) and compile Amica with the command (/F sets the stack size):
 
-         > "c:\Program Files (x86)\Intel\Composer XE 2011 SP1\bin\compilervars.bat" intel64
+         > mpif90 /Qopenmp /Qmkl /F2147483648 /DMKL /fpp  /O3 /exe:amica15mkl.exe funmod2.f90 amica15.f90
 
-4. Compile Amica with the command (/F sets the stack size):
-
-         > ifort /Qopenmp /Qmkl /F2147483648 /DMKL /fpp  /O3 /exe:amica15mkl.exe funmod2.f90 amica15.f90 fmpich2.lib
-
-5. Test:
+4. Test:
 
          > .\amica15mkl.exe .\amicadefs.param
+
+5. The files impi.dll and libfabric.dll should be copied to executable folder when running outside OneAPI command window. Search OneAPI mpi directory for locations.
 
 ## TO COMPILE WITH INTEL FORTRAN ON UBUNTU
 
