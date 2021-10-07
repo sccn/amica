@@ -875,7 +875,7 @@ if RUN_LOCALLY == 1
     system([AMBIN ' ' outdir 'input.param']);
     t = toc;
     if t < 2 
-        if ispc
+        if 0 %ispc -- deprecated, no longer relevant
             p = fileparts(which('runamica15'));
             mydlg = warndlg( [ 'Before running AMICA, you need to install the MPI librairy' 10 ...
                         fullfile(p, 'mpich2-1.4-win-x86-64.msi') 10 ...
