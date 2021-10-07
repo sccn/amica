@@ -3,8 +3,24 @@ Code for AMICA: Adaptive Mixture ICA with shared component
 
 Refer to the [Amica wiki](https://github.com/japalmer29/amica/wiki) for documentation.
 
+## TO COMPILE WITH INTEL FORTRAN ON WINDOWS
+
+1. Install Intel OneAPI Base Toolkit for Windows.
+2. Install Intel OneAPI HPC Toolkit for Windows.
+3. Open Intel OneAPI command window (in Start menu, 32 or 64 bit as appropriate) and compile Amica with the command (/F sets the stack size):
+
+         > mpif90 /Qopenmp /Qmkl /F2147483648 /DMKL /fpp /O3 /exe:amica15mkl.exe funmod2.f90 amica15.f90
+
+4. Test:
+
+         > .\amica15mkl.exe .\amicadefs.param
+
+5. The files impi.dll and libfabric.dll should be copied to executable folder when running outside OneAPI command window. Search OneAPI mpi directory for locations.
+
+
 ## TO COMPILE WITH INTEL FORTRAN ON MAC
 
+0. These are old instructions. Try using Intel OneAPI modifiying the commands similar to the instructions for Windows above.
 1. Install Intel Fortran compiler for Mac/Linux (free demo).
    See https://software.intel.com/en-us/intel-parallel-studio-xe
 
@@ -37,22 +53,10 @@ Refer to the [Amica wiki](https://github.com/japalmer29/amica/wiki) for document
    
          $ ./amica15mac ./amicadefs.param
 
-## TO COMPILE WITH INTEL FORTRAN ON WINDOWS
-
-1. Install Intel OneAPI Base Toolkit for Windows.
-2. Install Intel OneAPI HPC Toolkit for Windows.
-3. Open Intel OneAPI command window (in Start menu, 32 or 64 bit as appropriate) and compile Amica with the command (/F sets the stack size):
-
-         > mpif90 /Qopenmp /Qmkl /F2147483648 /DMKL /fpp /O3 /exe:amica15mkl.exe funmod2.f90 amica15.f90
-
-4. Test:
-
-         > .\amica15mkl.exe .\amicadefs.param
-
-5. The files impi.dll and libfabric.dll should be copied to executable folder when running outside OneAPI command window. Search OneAPI mpi directory for locations.
 
 ## TO COMPILE WITH INTEL FORTRAN ON UBUNTU
 
+0. These are old instructions. Try using Intel OneAPI modifiying the commands similar to the instructions for Windows above.
 1. Install Intel Fortran compiler for Linux.
 2. Compile MPICH2 setting environmental vars CC, CXX, FC, and F77 to icc and ifort.
 3. Compile Amica with the command:
@@ -62,7 +66,8 @@ Refer to the [Amica wiki](https://github.com/japalmer29/amica/wiki) for document
 4. Test:
 
          $ ./amica15ub ./amicadefs.param
-         
+
+
 ## TO COMPILE WITH INTEL FORTRAN ON EXPANSE SUPERCOMPUTER
 
 1. load appropriate modules:
@@ -91,6 +96,8 @@ Refer to the [Amica wiki](https://github.com/japalmer29/amica/wiki) for document
 ```
 
 ## VERSION HISTORY
+
+1.6.1 - Modify Windows compilation instructions. Intel OneAPI should be tested for Mac and Ubuntu.
 
 1.6 - Deprecate Comet and replace with Expanse supercomputer executable
 
