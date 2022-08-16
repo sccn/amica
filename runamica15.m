@@ -765,7 +765,11 @@ end;
 %%%%%%%%%%%%%%%%%%%%% create the param file %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 if outdir(1) == '.'
-    outdir = [pwd outdir(2:end)];
+    if outdir(2) == '.'
+        outdir = [pwd filesep outdir];
+    else
+        outdir = [pwd outdir(2:end)];
+    end
 end
 if outdir(end) ~= filesep
     outdir(end+1) = filesep;
