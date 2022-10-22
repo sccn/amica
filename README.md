@@ -97,6 +97,8 @@ Refer to the [Amica wiki](https://github.com/japalmer29/amica/wiki) for document
 
 ## VERSION HISTORY
 
+1.7 - Update documentation for pop_runamica and add test file
+
 1.6.1 - Modify Windows compilation instructions. Intel OneAPI should be tested for Mac and Ubuntu.
 
 1.6 - Deprecate Comet and replace with Expanse supercomputer executable

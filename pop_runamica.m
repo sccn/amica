@@ -1,15 +1,32 @@
-% pop_runamica() - Perform AMICA -- adaptive ICA using multiple models through GUI.
-
-% Optional keywords:
+% pop_runamica() - Perform AMICA -- adaptive ICA using multiple models 
+%                  through GUI or command line call.
 %
+% Usage:
+% EEG = pop_runamica(EEG) % pop up interface
+% EEG = pop_runamica(EEG, 'key', val)
+%
+% Optional keywords:
+%   'num_models'     - number of models to learn, default = 1              
+%   'num_mix_comps'  - number of mixture components in source model, def=3 
+%   'numprocs'       - number or processors (slots) to use, def=8 
+%   'maxiter'        - maximum number of iterations to perform, def=2000   
+%   'lrate'          - initial learning rate for natural gradient, def=0.1
+%   'do_newton'      - flag for newton method, default = 1 (do newton)
+%   'newt_start'     - for newton method, iter at which to start newton, def=50
+%   'writestep'      - iteration interval between output writes, def=10
+%   'do_reject'      - flag for doing rejection of time points, def=0
+%   'numrej'         - for rejection, number of rejections to perform, def=3
+%   'rejsig'         - for rejection, number of standard dev of likelihood
+%                      below which to reject data {DEFAULT??}
+%   'rejstart'       - for rejection, iteration at which to start reject, def=3
+%   'rejint'         - for rejection, iteration interval between reject, def=3
+%   'max_threads'    - maximum number of threads to use on a node, def=4
+%   'pcakeep'        - for PCA reduction, number of components to keep, def=chans
+%   'block_size'     - matrix block size (for block multiplication), def=128
+%
+% Authors: Jason Palmer, Arnaud Delorme and Ramon Martinez-Cancino, SCCN 2017
+
 %   indir               optional input directory from which to load init (MISSING)
-
-%   num_models          number of models to learn, default = 1              
-%   num_mix_comps       number of mixture components in source model, def=3 
-%   numprocs            number or processors (slots) to use, def=8 
-%   max_iter            maximum number of iterations to perform, def=2000   
-%   lrate               initial learning rate for natural gradient, def=0.1
-
 %   lratefact           multiplicative factor by which to decrease lrate, def=0.5 (MISSING) 
 %   minlrate            lrate after which to stop, def=1e-8                       (MISSING)
 %   rholrate            initial lrate for shape parameters, def=0.05              (MISSING)
@@ -18,27 +35,24 @@
 %   maxrho              maximum shape parameter value, def=2.0                    (MISSING)
 %   rholratefact        multiplicative factor by which to dec rholrate, def=0.5   (MISSING)
 
-%   do_newton           flag for newton method, default = 1 (do newton)
-%   newt_start          for newton method, iter at which to start newton, def=50
-
+%   decwindow           moving average window to detect likelihood decrease, def=1 (MISSING)
+%   doscaling           flag to rescale unmixing matrix rows to unit norm, def=1  (MISSING)
 
 %   newtrate            for newton method, lrate for newton iterations, def=1.0          (MISSING)
 %   newt_ramp           for newton method, number of iter to ramp up to newtrate, def=10 (MISSING)
 
-%   writestep           iteration interval between output writes, def=10
-
 %   write_nd            flag to write history of component update norms, def=1    (MISSING)
 %   write_llt           flag to write model log likelihoods of time points, def=1 (MISSING)
 
-%   do_reject           flag for doing rejection of time points, def=0
-%   numrej              for rejection, number of rejections to perform, def=3
-%   rejsig              for rejection, number of standard dev of likelihood
-%                           below which to reject data {DEFAULT??}
-%   rejstart            for rejection, iteration at which to start reject, def=3
-%   rejint              for rejection, iteration interval between reject, def=3
-%   max_threads         maximum number of threads to use on a node, def=4
-
-%   decwindow           moving average window to detect likelihood decrease, def=1 (MISSING)
+% Disabled:
+%   do_mean             flag to remove mean from data, def=1
+%   do_sphere           flag to sphere data before ica, def=1
+%   doPCA               flag to to PCA dimensionalit reduction, def=0
+%   kurt_int            for ext. infomax, iteration interval between calc, def=1
+%   kurt_start          for ext. infomax, iter to start kurtosis calc, def=3
+%   load_comp_list      flag to load component assignment list, def=0
+%   num_kurt            for ext. infomax, number of kurtosis calc, def=5
+%   scalestep           iteration interval at which to rescale unmixing rows, def=1
 
 % (MISSING) ---------------------------------------------------------------
 %   update_A            flag to update mixing matrices, def=1
@@ -54,21 +68,7 @@
 %   load_param          flag to load parameters, def=0
 % -------------------------------------------------------------------------
 
-%   pcakeep             for PCA reduction, number of components to keep, def=chans
-%   doscaling           flag to rescale unmixing matrix rows to unit norm, def=1  (MISSING)
-%   block_size          matrix block size (for block multiplication), def=128
-%
-% Disabled:
-%   do_mean             flag to remove mean from data, def=1
-%   do_sphere           flag to sphere data before ica, def=1
-%   doPCA               flag to to PCA dimensionalit reduction, def=0
-%   kurt_int            for ext. infomax, iteration interval between calc, def=1
-%   kurt_start          for ext. infomax, iter to start kurtosis calc, def=3
-%   load_comp_list      flag to load component assignment list, def=0
-%   num_kurt            for ext. infomax, number of kurtosis calc, def=5
-%   scalestep           iteration interval at which to rescale unmixing rows, def=1
-%
-% Authors: Jason Palmer, Arnaud Delorme and Ramon Martinez-Cancino, SCCN 2017
+
 function [EEG, com] = pop_runamica(EEG,varargin)
 
 com = [];
@@ -77,68 +77,68 @@ com = [];
 machinefile = [fileparts(which('pop_runamica')) filesep 'machines'];
 try
     options = varargin;
-    if ~isempty( varargin ),
+    if ~isempty( varargin )
         for i = 1:2:numel(options)
             g.(options{i}) = options{i+1};
         end
-    else g= []; end;
+    else g= []; end
 catch
     disp('pop_runamica() error: calling convention {''key'', value, ... } error'); return;
-end;
+end
 % NOte : detect if CAR and change pcakeep to nchan-1
-try g.datfile;               catch, g.datfile       = fullfile(EEG.filepath, EEG.datfile);   end; 
-try g.outdir;                catch, g.outdir        = fullfile(EEG.filepath, 'amicaout');    end; 
-try g.num_mod;               catch, g.num_mod       = 1;                            end; 
-try g.max_iter;              catch, g.max_iter      = 2000;                         end; 
-try g.max_threads;           catch, g.max_threads   = 4;                            end; 
-try g.pcakeep;               catch, g.pcakeep       = EEG.nbchan;                   end; 
-try g.nchan;                 catch, g.nchan         = EEG.nbchan;                   end;
-try g.pdftype;               catch, g.pdftype       = 0;                            end;
+try g.datfile;               catch, g.datfile       = fullfile(EEG.filepath, EEG.datfile);   end
+try g.outdir;                catch, g.outdir        = fullfile(EEG.filepath, 'amicaout');    end
+try g.num_mod;               catch, g.num_mod       = 1;                            end
+try g.maxiter;               catch, g.maxiter       = 2000;                         end
+try g.max_threads;           catch, g.max_threads   = 4;                            end
+try g.pcakeep;               catch, g.pcakeep       = EEG.nbchan;                   end
+try g.nchan;                 catch, g.nchan         = EEG.nbchan;                   end
+try g.pdftype;               catch, g.pdftype       = 0;                            end
 
 % Block of former global vars
 % Flags --------------------------------------------------------
-try g.setsph;               catch, g.setsph  = 0;           end;
-try g.setrej;               catch, g.setrej  = 0;           end;
-try g.setmod;               catch, g.setmod  = 0;           end;
-try g.setstop;              catch, g.setstop = 0;           end;
-try g.setblk;               catch, g.setblk  = 0;           end;
-try g.setlrat;              catch, g.setlrat = 0;           end;
-try g.setmpi;               catch, g.setmpi  = 0;           end;
+try g.setsph;               catch, g.setsph  = 0;           end
+try g.setrej;               catch, g.setrej  = 0;           end
+try g.setmod;               catch, g.setmod  = 0;           end
+try g.setstop;              catch, g.setstop = 0;           end
+try g.setblk;               catch, g.setblk  = 0;           end
+try g.setlrat;              catch, g.setlrat = 0;           end
+try g.setmpi;               catch, g.setmpi  = 0;           end
 %---------------------------------------------------------------
  
-try g.do_sphere;        g.setsph = 1;   catch, g.do_sphere     = 1;             end; 
-try g.mineig;           g.setsph = 1;   catch, g.mineig        = 1e-12;         end;  
+try g.do_sphere;        g.setsph = 1;   catch, g.do_sphere     = 1;             end
+try g.mineig;           g.setsph = 1;   catch, g.mineig        = 1e-12;         end 
 
-try g.do_reject;        g.setrej = 1;   catch, g.do_reject     = 0;             end;  
-try g.numrej;           g.setrej = 1;   catch, g.numrej        = 3;             end;
-try g.rejsig;           g.setrej = 1;   catch, g.rejsig        = 3;             end;  
-try g.rejstart;         g.setrej = 1;   catch, g.rejstart      = 3;             end;  
-try g.rejint;           g.setrej = 1;   catch, g.rejint        = 3;             end;  
+try g.do_reject;        g.setrej = 1;   catch, g.do_reject     = 0;             end 
+try g.numrej;           g.setrej = 1;   catch, g.numrej        = 3;             end
+try g.rejsig;           g.setrej = 1;   catch, g.rejsig        = 3;             end 
+try g.rejstart;         g.setrej = 1;   catch, g.rejstart      = 3;             end 
+try g.rejint;           g.setrej = 1;   catch, g.rejint        = 3;             end 
 
-try g.num_mix_comps;    g.setmod = 1;   catch, g.num_mix_comps = 3;             end; 
+try g.num_mix_comps;    g.setmod = 1;   catch, g.num_mix_comps = 3;             end
 
-try g.maxiter;          g.setstop = 1;  catch, g.maxiter       = 2000;          end; 
-try g.use_grad_norm;    g.setstop = 1;  catch, g.use_grad_norm = [];            end; 
-try g.min_grad_norm;    g.setstop = 1;  catch, g.min_grad_norm = [];            end; 
-try g.use_min_dll;      g.setstop = 1;  catch, g.use_min_dll   = 1;             end; 
-try g.min_dll;          g.setstop = 1;  catch, g.min_dll       = 1e-9;          end; 
+try g.maxiter;          g.setstop = 1;  catch, g.maxiter       = 2000;          end
+try g.use_grad_norm;    g.setstop = 1;  catch, g.use_grad_norm = [];            end
+try g.min_grad_norm;    g.setstop = 1;  catch, g.min_grad_norm = [];            end
+try g.use_min_dll;      g.setstop = 1;  catch, g.use_min_dll   = 1;             end
+try g.min_dll;          g.setstop = 1;  catch, g.min_dll       = 1e-9;          end
 
-try g.lrate;            g.setlrat = 1;  catch, g.lrate         = 0.1;           end; 
-try g.do_newton;        g.setlrat = 1;  catch, g.do_newton     = 1;             end; 
-try g.newt_start;       g.setlrat = 1;  catch, g.newt_start    = 50;            end; 
-try g.writestep;        g.setlrat = 1;  catch, g.writestep     = 10;            end; 
-try g.do_history;       g.setlrat = 1;  catch, g.do_history    = 0;             end; 
-try g.histstep;         g.setlrat = 1;  catch, g.histstep      = 10;            end;
+try g.lrate;            g.setlrat = 1;  catch, g.lrate         = 0.1;           end
+try g.do_newton;        g.setlrat = 1;  catch, g.do_newton     = 1;             end
+try g.newt_start;       g.setlrat = 1;  catch, g.newt_start    = 50;            end
+try g.writestep;        g.setlrat = 1;  catch, g.writestep     = 10;            end
+try g.do_history;       g.setlrat = 1;  catch, g.do_history    = 0;             end
+try g.histstep;         g.setlrat = 1;  catch, g.histstep      = 10;            end
 
-try g.block_size;       g.setblk = 1;   catch, g.block_size    = 128;           end; 
-try g.do_opt_block;     g.setblk = 1;   catch, g.do_opt_block  = 1;             end; 
-try g.blk_min;          g.setblk = 1;   catch, g.blk_min       = 256;           end; 
-try g.blk_step;         g.setblk = 1;   catch, g.blk_step      = 256;           end; 
-try g.blk_max;          g.setblk = 1;   catch, g.blk_max       = 1024;          end;
+try g.block_size;       g.setblk = 1;   catch, g.block_size    = 128;           end
+try g.do_opt_block;     g.setblk = 1;   catch, g.do_opt_block  = 1;             end
+try g.blk_min;          g.setblk = 1;   catch, g.blk_min       = 256;           end
+try g.blk_step;         g.setblk = 1;   catch, g.blk_step      = 256;           end
+try g.blk_max;          g.setblk = 1;   catch, g.blk_max       = 1024;          end
 
-try g.dompi;            g.setmpi = 1;   catch, g.dompi         = 0;             end;
-try g.numprocs;         g.setmpi = 1;   catch, g.numprocs      = 1;             end; 
-try g.machinefile;      g.setmpi = 1;   catch, g.machinefile   = machinefile;   end;
+try g.dompi;            g.setmpi = 1;   catch, g.dompi         = 0;             end
+try g.numprocs;         g.setmpi = 1;   catch, g.numprocs      = 1;             end
+try g.machinefile;      g.setmpi = 1;   catch, g.machinefile   = machinefile;   end
 
 if nargin == 1
     % Formers globals initialized for GUI

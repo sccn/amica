@@ -44,7 +44,7 @@
 function vers = eegplugin_amica(fig, trystrs, catchstrs)
     
     %global EEG
-    vers = '1.6.1';
+    vers = '1.7';
     if nargin < 3
         error('eegplugin_amica requires 3 arguments');
     end;
