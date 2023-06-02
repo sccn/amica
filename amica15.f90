@@ -1107,6 +1107,12 @@ do
          !print *, myrank+1, ': calling write_output ...'; call flush(6)
          call write_output
       end if
+
+      !----- write history if it's a specified step
+      if (do_history .and. mod(iter,histstep) == 0) then
+         !print *, myrank+1, ': calling write_output ...'; call flush(6)
+         call write_history
+      end if
       
       !----- reject data
       if ((do_reject .and. (maxrej > 0)) .and. ((iter==rejstart) .or. ((mod(max(1,iter-rejstart),rejint) == 0) .and. (numrej < maxrej)))) then
@@ -2260,6 +2266,45 @@ end subroutine reject_data
 
 !----------------------------------------------------------------------
 
+subroutine write_history
+  if (myrank == 0) then
+
+    if (iter == histstep) then !it seems this isn't getting triggered:
+        call system('mkdir '//trim(outdirparam)//'history')
+        !call system('mkdir '//trim(outdirparam)//'/history'//' &>/dev/null')
+    end if
+
+    write(tmpstring,"(i15)") iter
+    call system('mkdir '//trim(outdirparam)//'history/'//trim(adjustl(tmpstring)))
+
+    call DGEMM('N','N',nx,num_models,nw,dble(1.0),Spinv,nx,c,nw,dble(0.0),cx,nx)
+    call DGEMM('N','N',nx,num_comps,nw,dble(1.0),Spinv,nx,A,nw,dble(0.0),Ax,nx)
+
+    open(unit=29,file=trim(outdirparam)//'/history/'//trim(adjustl(tmpstring))//'/'//outfile_c,access='direct',status='replace',recl=2*nbyte*nw*num_models)
+    write(29,rec=1) c; call flush(29); close(29)
+    open(unit=9,file=trim(outdirparam)//'/history/'//trim(adjustl(tmpstring))//'/'//outfile_w,access='direct',status='replace',recl=2*nbyte*nw*nw*num_models)
+    write(9,rec=1) W; call flush(9); close(9)
+    open(unit=10,file=trim(outdirparam)//'/history/'//trim(adjustl(tmpstring))//'/'//outfile_gamma,access='direct',status='replace',recl=2*nbyte*num_models)
+    write(10,rec=1) gm; call flush(10); close(10)
+    open(unit=11,file=trim(outdirparam)//'/history/'//trim(adjustl(tmpstring))//'/'//outfile_alpha,access='direct',status='replace',recl=2*nbyte*num_mix*num_comps)
+    write(11,rec=1) alpha; call flush(11); close(11)
+    open(unit=12,file=trim(outdirparam)//'/history/'//trim(adjustl(tmpstring))//'/'//outfile_mu,access='direct',status='replace',recl=2*nbyte*num_mix*num_comps)
+    write(12,rec=1) mu; call flush(12); close(12)
+    open(unit=13,file=trim(outdirparam)//'/history/'//trim(adjustl(tmpstring))//'/'//outfile_sbeta,access='direct',status='replace',recl=2*nbyte*num_mix*num_comps)
+    write(13,rec=1) sbeta; call flush(13); close(13)
+    open(unit=14,file=trim(outdirparam)//'/history/'//trim(adjustl(tmpstring))//'/'//outfile_rho,access='direct',status='replace',recl=2*nbyte*num_mix*num_comps)
+    write(14,rec=1) rho; call flush(14); close(14)
+    open(unit=15,file=trim(outdirparam)//'/history/'//trim(adjustl(tmpstring))//'/'//outfile_mean,access='direct',status='replace',recl=2*nbyte*nx)
+    write(15,rec=1) mean; call flush(15); close(15)
+    open(unit=16,file=trim(outdirparam)//'/history/'//trim(adjustl(tmpstring))//'/'//outfile_sphere,access='direct',status='replace',recl=2*nbyte*nx*nx)
+    write(16,rec=1) S; call flush(16); close(16)
+    open(unit=21,file=trim(outdirparam)//'/history/'//trim(adjustl(tmpstring))//'/'//outfile_A,access='direct',status='replace',recl=2*nbyte*nw*num_comps)
+    write(21,rec=1) A; call flush(21); close(21)
+    open(unit=22,file=trim(outdirparam)//'/history/'//trim(adjustl(tmpstring))//'/'//outfile_comp_list,access='direct',status='replace',recl=2*nbyte*nw*num_models)
+    write(22,rec=1) comp_list; call flush(21); close(22)
+ end if
+end subroutine write_history
+
 subroutine write_output
   k = 0
   if (write_LLt) then
@@ -2298,18 +2343,6 @@ subroutine write_output
      !print *, 'rho = ', rho(1:min(5,2*num_mix)); call flush(6)
      !print *, 'c = ', c(1:min(5,nw)); call flush(6)
      !print *, 'W = ', W(1:min(5,nw)); call flush(6)
-
-     if (do_history) then
-        if (mod(iter,histstep) == 0) then
-           if (iter == histstep) then
-              call system('mkdir '//trim(outdirparam)//'/history') 
-              !call system('mkdir '//trim(outdirparam)//'/history'//' &>/dev/null') 
-           end if
-           write(tmpstring,"(i15)") iter
-           call system('mkdir '//trim(outdirparam)//'/history/'//trim(adjustl(tmpstring)))
-           !call system('mkdir '//trim(outdirparam)//'/history/'//trim(adjustl(tmpstring))//' &>/dev/null') 
-        end if
-     end if
 
      call DGEMM('N','N',nx,num_models,nw,dble(1.0),Spinv,nx,c,nw,dble(0.0),cx,nx)
      call DGEMM('N','N',nx,num_comps,nw,dble(1.0),Spinv,nx,A,nw,dble(0.0),Ax,nx)
@@ -2382,30 +2415,7 @@ subroutine write_output
         open(unit=22,file=trim(outdirparam)//'/'//outfile_comp_list,access='direct',status='replace',recl=2*nbyte*nw*num_models)
         write(22,rec=1) comp_list; call flush(21); close(22)
      end if
-     if (do_history .and. mod(iter,histstep) == 0) then
-        open(unit=29,file=trim(outdirparam)//'/history/'//trim(adjustl(tmpstring))//'/'//outfile_c,access='direct',status='replace',recl=2*nbyte*nw*num_models)
-        write(29,rec=1) c; call flush(29); close(29)
-        open(unit=9,file=trim(outdirparam)//'/history/'//trim(adjustl(tmpstring))//'/'//outfile_w,access='direct',status='replace',recl=2*nbyte*nw*nw*num_models)
-        write(9,rec=1) W; call flush(9); close(9)
-        open(unit=10,file=trim(outdirparam)//'/history/'//trim(adjustl(tmpstring))//'/'//outfile_gamma,access='direct',status='replace',recl=2*nbyte*num_models)
-        write(10,rec=1) gm; call flush(10); close(10)
-        open(unit=11,file=trim(outdirparam)//'/history/'//trim(adjustl(tmpstring))//'/'//outfile_alpha,access='direct',status='replace',recl=2*nbyte*num_mix*num_comps)
-        write(11,rec=1) alpha; call flush(11); close(11)
-        open(unit=12,file=trim(outdirparam)//'/history/'//trim(adjustl(tmpstring))//'/'//outfile_mu,access='direct',status='replace',recl=2*nbyte*num_mix*num_comps)
-        write(12,rec=1) mu; call flush(12); close(12)
-        open(unit=13,file=trim(outdirparam)//'/history/'//trim(adjustl(tmpstring))//'/'//outfile_sbeta,access='direct',status='replace',recl=2*nbyte*num_mix*num_comps)
-        write(13,rec=1) sbeta; call flush(13); close(13)
-        open(unit=14,file=trim(outdirparam)//'/history/'//trim(adjustl(tmpstring))//'/'//outfile_rho,access='direct',status='replace',recl=2*nbyte*num_mix*num_comps)
-        write(14,rec=1) rho; call flush(14); close(14)
-        open(unit=15,file=trim(outdirparam)//'/history/'//trim(adjustl(tmpstring))//'/'//outfile_mean,access='direct',status='replace',recl=2*nbyte*nx)
-        write(15,rec=1) mean; call flush(15); close(15)
-        open(unit=16,file=trim(outdirparam)//'/history/'//trim(adjustl(tmpstring))//'/'//outfile_sphere,access='direct',status='replace',recl=2*nbyte*nx*nx)
-        write(16,rec=1) S; call flush(16); close(16)
-        open(unit=21,file=trim(outdirparam)//'/history/'//trim(adjustl(tmpstring))//'/'//outfile_A,access='direct',status='replace',recl=2*nbyte*nw*num_comps)
-        write(21,rec=1) A; call flush(21); close(21)
-        open(unit=22,file=trim(outdirparam)//'/history/'//trim(adjustl(tmpstring))//'/'//outfile_comp_list,access='direct',status='replace',recl=2*nbyte*nw*num_models)
-        write(22,rec=1) comp_list; call flush(21); close(22)
-     end if
+
   end if
 end subroutine write_output
 
