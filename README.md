@@ -3,6 +3,8 @@ Code for AMICA: Adaptive Mixture ICA with shared component
 
 Refer to the [Amica wiki](https://github.com/japalmer29/amica/wiki) for documentation.
 
+Refer also to Jason Palmer's [AMICA page](https://sccn.ucsd.edu/~jason/amica_web.html).
+
 ## TO COMPILE WITH INTEL FORTRAN ON WINDOWS
 
 1. Install Intel OneAPI Base Toolkit for Windows.
