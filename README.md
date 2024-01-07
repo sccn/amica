@@ -76,20 +76,14 @@ Refer also to Jason Palmer's [AMICA page](https://sccn.ucsd.edu/~jason/amica_web
 
 ```
    module purge
-   module load cpu/0.15.4
-   module load intel
-   module load intel-mkl
-   module load mvapich2
-
-   mpif90 -static-intel -fpp -O3 -march=core-avx2 -heap-arrays \
-       -qopenmp -mkl -DMKL -o amica17nsg funmod2.f90 amica17.f90
+   module load cpu/0.15.4 intel intel-mkl mvapich2
 ```
 
 2. Compile Amica with the command:
 
 ```
    mpif90 -static-intel -fpp -O3 -march=core-avx2 -heap-arrays \
-       -qopenmp -mkl -DMKL -o amica15ex funmod2.f90 amica15.f90
+       -qopenmp -mkl -DMKL -o amica15ex funmod2.f90 amica17.f90
 ```
 
 3. Test:
@@ -100,11 +94,12 @@ Refer also to Jason Palmer's [AMICA page](https://sccn.ucsd.edu/~jason/amica_web
 4. Run on compute partition:
    
 ```
-   <Edit amicadefs.param file line to: maxthreads 4
+   <Edit amicadefs.param file line to: maxthreads 4>
    $ module load cpu/0.15.4 slurm intel intel-mkl mvapich2
    $ export OMP_NUM_THREADS=4 ; export SRUN_CPUS_PER_TASK=4 ; export MV2_ENABLE_AFFINITY=0
    $ srun --partition=compute --nodes=<NUM_NODES> --tasks-per-node=32 --cpus-per-task=4 \
         --mem=249208M --account=<ACCOUNT> --export=ALL -t 04:00:00 ./amica17nsg ./amicadefs.param
+   <If job fails, reduce block_size in amicadefs.param. Increase block_size to speed up.>
 ```
 ## VERSION HISTORY
 
