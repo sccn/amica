@@ -24,23 +24,26 @@
 %   outdir              name of directory to write output (does not have to exist), def=pwd/amicaouttmp/
 %   indir               optional input directory from which to load init
 %   num_procs           number of nodes to use
+%   max_threads         maximum number of threads to use if run locally, def=4
 %   batch               use a batch script, 0 or 1, def=0
 %   num_chans           number of channels in data (only needed if dat input is a filename)
-%   num_models          number of models to learn, default = 1
+%   block_size          matrix multiplication block size
+%   do_opt_block        optimize block size, def=0
+%   blk_min             min of block optimization range
+%   blk_max             max of block optimization range
+%   blk_step            step for block optimization range
+%   num_models          number of models to learn, def=1
 %   num_mix_comps       number of mixture components in source model, def=3
-%   max_iter            maximum number of iterations to perform, def=2000
+%   max_iter            maximum number of iterations to perform, def=2500
 %   lrate               initial learning rate for natural gradient, def=0.1
-%   share_comps         flag to share components when num_models > 1, def=0
-%   comp_thresh         correlation threshold to share component, def=0.99
-%   share_start         iteration to start looking for shared components, def=100
-%   share_int           number of iterations between sharing checks, def=100
+%   minlrate            lrate after which to stop, def=1e-8
+%   use_grad_norm       stop when average parameter update is les than min_grad_norm, def=1
+%   min_grad_norm       min_grad_norm value, def=1e-7
+%   use_min_dll         stop when log likelihood change is les than min_dll, def=1
+%   min_dll             min_dll value, def=1e-10
 %   do_history          save a record of the paramter values over iterations def=0
 %   histstep            iteration interval at which to save for history, def=10
-%   use_queue           name of queue to use, def=all.q. Use 'use_queue',0 to run locally
-%   numprocs            number or processors (slots) to use in qsub, def=8
-%   max_threads         maximum number of threads to use if run locally, def=4
 %   lratefact           multiplicative factor by which to decrease lrate, def=0.5
-%   minlrate            lrate after which to stop, def=1e-8
 %   rholrate            initial lrate for shape parameters, def=0.05
 %   rho0                initial shape parameter value, def=1.5
 %   minrho              minimum shape parameter value, def=1.0
@@ -54,14 +57,10 @@
 %   write_nd            flag to write history of component update norms, def=1
 %   write_llt           flag to write model log likelihoods of time points, def=1
 %   do_reject           flag for doing rejection of time points, def=0
-%   numrej              for rejection, number of rejections to perform, def=3
-%   rejsig              for rejection, number of standard dev of likelihood
-%                           below which to reject data
-%   rejstart            for rejection, iteration at which to start reject, def=3
-%   rejint              for rejection, iteration interval between reject, def=3
-%   kurt_start          for ext. infomax, iter to start kurtosis calc, def=3
-%   num_kurt            for ext. infomax, number of kurtosis calc, def=5
-%   kurt_int            for ext. infomax, iteration interval between calc, def=1
+%   numrej              number of rejections to perform, def=3
+%   rejsig              number of std dev of likelihood below which to reject data, def=3
+%   rejstart            for rejection, iteration at which to start reject, def=1
+%   rejint              for rejection, iteration interval between reject, def=1
 %   decwindow           moving average window to detect likelihood decrease, def=1
 %   update_A            flag to update mixing matrices, def=1
 %   update_c            flag to update model centers, def=1
@@ -83,21 +82,26 @@
 %   scalestep           iteration interval at which to rescale unmixing rows, def=1
 %
 % Outputs:
-%   
+%   EEG - if there is an input EEG, it is loaded with the ICA output, first
+%   model in case the
 %   To load output use the function loadmodout() after job ends:
 %                         
 %       mods = eeg_loadamica(outdir);
 %
-%   mods is a structure containing the output components and density models. mods.A(:,:,h) is the components for model h.
-%   mods.varord(:,h) is the index order of the components in variance order, mods.Lht is the likelihood of time
-%   points for each model (if set), mods.LL is the history of the log likelihood over iterations, mods.c(:,h)
-%   is the center for model h, mods.W(:,:,h) is the unmixing matrix for model h, and mods.S is the sphering matrix.
+%   mods is a structure containing the output components and density models.
+%       mods.A(:,:,h)       the components for model h.
+%       mods.varord(:,h)    the index order of the components in variance order
+%       mods.Lht            the likelihood of time points for each model (if set)
+%       mods.LL             the history of the log likelihood over iterations
+%       mods.c(:,h)         the center for model h
+%       mods.W(:,:,h)       the unmixing matrix for model h
+%       mods.S              the sphering matrix, first num_pcs rows used
 %                       
 % See also: eeg_loadamica()
 %
 %
 
-function runamica17_nsg(dat,varargin)
+function EEG = runamica17_nsg(dat,varargin)
 
 if nargin < 1
     help runamica17_nsg;
@@ -121,27 +125,14 @@ end
 % run locally (single node) or globally (multiple nodes)
 RUN_LOCALLY = 0;
 
-% file path of mpi binary (not used)
-%MPI_BIN = '/opt/openmpi/intel/ib/bin/';  % on NSG
-%MPI_BIN = '/opt/openmpi/bin/';
-%MPI_BIN = '/opt/mpich2/gnu/bin/';
-%MPI_BIN = '/home/jason/mpich-3.1.3-install/bin/';
-%MPI_BIN = '/home/jason/mpich2-1.5-install_j/bin/';  % on juggling
-%MPI_BIN = '/home/jason/mpich2-1.5-install/bin/';   % on computing
-%MPI_BIN = '/home/jason/openmpi-1.8.4-install/bin/';
-%use_pe = 'mpirun'; % 'mpich';
-
 
 %%%%%%%%%% Define AMICA parameters %%%%%%%%%%%%%%%
 
 numprocs = 1;           % # nodes. When set to > 1, RUN_LOCALLY is set to 0
 max_threads = 4;       % # threads. For NSG, default to max-number (24) threads
-%npernode = 1;           % # MPI tasks per node. Divide 24-core node on NSG into subnodes, each runs an MPI task.  
 bytesize = 4;           % convert data to floating point format
 
 batch = 0;
-
-send_mail = 0;
 
 fix_init = 0;
 
@@ -161,11 +152,6 @@ mineig = 1e-9;
 do_history = 0;
 histstep = 10;
 
-share_comps = 0;
-comp_thresh = 0.99;
-share_start = 100;
-share_int = 100;
-
 lrate = 0.01;
 minlrate = 1e-8;
 lratefact = 0.5;
@@ -175,10 +161,6 @@ rho0 = 1.5;
 minrho = 1.0;
 maxrho = 2.0;
 rholratefact = 0.5;
-
-kurt_start = 3;
-num_kurt = 5;
-kurt_int = 1;
 
 do_newton = 1;
 newt_start = 50;
@@ -461,13 +443,6 @@ pcakeep = -1;
          else             
             fix_init = Value;
          end
-      elseif strcmp(Keyword,'send_mail')
-         if isstr(Value)
-            fprintf('runamica(): send_mail should be 0 or 1');
-            return
-         else       
-            send_mail = Value;
-         end
       elseif strcmp(Keyword,'do_newton')
          if isstr(Value)
             fprintf('runamica(): do_newton should be 0 or 1');
@@ -475,9 +450,9 @@ pcakeep = -1;
          else             
             do_newton = Value;
          end
-      elseif strcmp(Keyword,'update_a')
+      elseif strcmp(Keyword,'update_A')
          if isstr(Value)
-            fprintf('runamica(): update_a should be 0 or 1');
+            fprintf('runamica(): update_A should be 0 or 1');
             return
          else             
             update_A = Value;
@@ -617,8 +592,7 @@ pcakeep = -1;
             return
          else
             rejint = Value;
-         end
-                  
+         end                  
       elseif strcmp(Keyword,'do_history')
          if isstr(Value)
             fprintf('runamica(): do_history must be 0 or 1');
@@ -633,35 +607,6 @@ pcakeep = -1;
          else
             histstep = Value;
          end
-         
-      elseif strcmp(Keyword,'share_comps')
-         if isstr(Value)
-            fprintf('runamica(): share_comps must be 0 or 1');
-            return
-         else
-            share_comps = Value;
-         end
-      elseif strcmp(Keyword,'share_start')
-         if isstr(Value)
-            fprintf('runamica(): share_start must be a number');
-            return
-         else
-            share_start = Value;
-         end
-      elseif strcmp(Keyword,'comp_thresh')
-         if isstr(Value)
-            fprintf('runamica(): comp_thresh must be a number');
-            return
-         else
-            comp_thresh = Value;
-         end
-      elseif strcmp(Keyword,'share_int')
-         if isstr(Value)
-            fprintf('runamica(): share_int int must be a number');
-            return
-         else
-            share_int = Value;
-         end                  
       elseif strcmp(Keyword,'max_threads')
          if isstr(Value)
             fprintf('runamica(): max_threads must be a number');
@@ -689,28 +634,6 @@ pcakeep = -1;
             return
          else
             maxdecs = Value;
-         end         
-      elseif strcmp(Keyword,'numprocs')
-         if isstr(Value)
-            fprintf('runamica(): numprocs must be a number');
-            return
-         else
-            numprocs = Value;
-         end         
-      elseif strcmp(Keyword,'npernode')
-          if isstr(Value)
-              fprintf('runamica(): npernode must be a number');
-              return
-          else
-              npernode = Value;
-          end
-      elseif strcmp(Keyword,'nodeproc')
-         if isstr(Value)
-            fprintf('runamica(): nodeproc must be a vector [numnodes procspernode]');
-            return
-         else
-            numprocs = Value(1);
-            max_threads = Value(2);
          end         
       elseif strcmp(Keyword,'pcakeep')
          if isstr(Value)
@@ -837,10 +760,6 @@ fprintf(fid,'field_dim %d\n',frames);
 fprintf(fid,'field_blocksize 1\n');
 fprintf(fid,'do_history %d\n',do_history);
 fprintf(fid,'histstep %d\n',histstep);
-fprintf(fid,'share_comps %d\n',share_comps);
-fprintf(fid,'share_start %d\n',share_start);
-fprintf(fid,'comp_thresh %f\n',comp_thresh);
-fprintf(fid,'share_iter %d\n',share_int);
 fprintf(fid,'lrate %f\n', lrate);
 fprintf(fid,'minlrate %e\n', minlrate);
 fprintf(fid,'mineig %e\n', mineig);
@@ -850,9 +769,6 @@ fprintf(fid,'rho0 %f\n', rho0);
 fprintf(fid,'minrho %f\n', minrho);
 fprintf(fid,'maxrho %f\n', maxrho);
 fprintf(fid,'rholratefact %f\n',rholratefact);
-fprintf(fid,'kurt_start %d\n',kurt_start);
-fprintf(fid,'num_kurt %d\n',num_kurt);
-fprintf(fid,'kurt_int %d\n',kurt_int);
 fprintf(fid,'do_newton %d\n',do_newton);
 fprintf(fid,'newt_start %d\n',newt_start);
 fprintf(fid,'newt_ramp %d\n',newt_ramp);
@@ -938,7 +854,7 @@ try
             fprintf(fid,'module load cpu/0.15.4 slurm intel intel-mkl mvapich2\n');
             fprintf(fid,['export OMP_NUM_THREADS=' int2str(max_threads) ...
                 '; export MV2_ENABLE_AFFINITY=0; export SRUN_CPUS_PER_TASK=${SLURM_CPUS_PER_TASK}\n']);
-            fprintf(fid,[' srun --export=ALL --mpi=pmi2 /expanse/projects/nemar/jason/amica0/amica17nsg ' outdir 'input.param\n']);
+            fprintf(fid,[' srun --export=ALL --mpi=pmi2 ' AMBIN ' ' outdir 'input.param\n']);
             fclose(fid);
 
             system('sbatch ./tmp.sh');
@@ -953,9 +869,14 @@ try
                 'srun --partition=compute --nodes=' int2str(numprocs) ' --ntasks-per-node=32 ' ...
                 ' --cpus-per-task=' int2str(max_threads) ...
                 ' --mem=249208M --account=csd403 --export=ALL -t 04:00:00 ' ...
-                ' /expanse/projects/nemar/jason/amica0/amica17nsg ' outdir 'input.param'];
+                AMBIN ' ' outdir 'input.param'];
 
             system(str);
+
+            if nargout > 0
+                EEG = eeg_loadamica(dat,outdir,1);
+                eeglab redraw;
+            end
         end
 
         %system(['ibrun --npernode ' int2str(npernode) ' ' AMBIN ' ' outdir 'input.param']); % added by SHH
