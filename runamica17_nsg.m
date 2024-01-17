@@ -23,7 +23,7 @@
 %
 %   outdir              name of directory to write output (does not have to exist), def=pwd/amicaouttmp/
 %   indir               optional input directory from which to load init
-%   num_procs           number of nodes to use
+%   numprocs            number of nodes to use
 %   max_threads         maximum number of threads to use if run locally, def=4
 %   batch               use a batch script, 0 or 1, def=0
 %   num_chans           number of channels in data (only needed if dat input is a filename)
@@ -450,7 +450,7 @@ pcakeep = -1;
          else             
             do_newton = Value;
          end
-      elseif strcmp(Keyword,'update_A')
+      elseif strcmp(Keyword,'update_A') %#ok<STCUL> 
          if isstr(Value)
             fprintf('runamica(): update_A should be 0 or 1');
             return
