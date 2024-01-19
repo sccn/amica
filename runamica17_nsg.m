@@ -23,7 +23,7 @@
 %
 %   outdir              name of directory to write output (does not have to exist), def=pwd/amicaouttmp/
 %   indir               optional input directory from which to load init
-%   numprocs            number of nodes to use
+%   num_procs           number of nodes to use
 %   max_threads         maximum number of threads to use if run locally, def=4
 %   batch               use a batch script, 0 or 1, def=0
 %   num_chans           number of channels in data (only needed if dat input is a filename)
@@ -53,7 +53,7 @@
 %   newt_start          for newton method, iter at which to start newton, def=50
 %   newtrate            for newton method, lrate for newton iterations, def=1.0
 %   newt_ramp           for newton method, number of iter to ramp up to newtrate, def=10
-%   writestep           iteration interval between output writes, def=10
+%   writestep           iteration interval between output writes, def=1000
 %   write_nd            flag to write history of component update norms, def=1
 %   write_llt           flag to write model log likelihoods of time points, def=1
 %   do_reject           flag for doing rejection of time points, def=0
@@ -82,20 +82,26 @@
 %   scalestep           iteration interval at which to rescale unmixing rows, def=1
 %
 % Outputs:
-%   EEG - if there is an input EEG, it is loaded with the ICA output, first
-%   model in case the
-%   To load output use the function loadmodout() after job ends:
+%   EEG                 if there is an input EEG, it is loaded with the first model
+%
+%   To load a particular model into EEG structure:
 %                         
-%       mods = eeg_loadamica(outdir);
+%       EEG = eeg_loadamica(EEG,outdir,modnum);
+%
+%   To load all models models:
+%
+%       mods = loadmodout15(outdir);
 %
 %   mods is a structure containing the output components and density models.
-%       mods.A(:,:,h)       the components for model h.
-%       mods.varord(:,h)    the index order of the components in variance order
-%       mods.Lht            the likelihood of time points for each model (if set)
-%       mods.LL             the history of the log likelihood over iterations
-%       mods.c(:,h)         the center for model h
-%       mods.W(:,:,h)       the unmixing matrix for model h
-%       mods.S              the sphering matrix, first num_pcs rows used
+%       mods.num_models     number of ICA models
+%       mods.mod_prob       1 x numodels, model probabilites (1 x num_models)
+%       mods.num_pcs        number of dimensions in the dim reduced data
+%       mods.A              mixing matrices (nchan x num_pcs x num_models)
+%       mods.Lht            model likelihood of time points (num_models x N)
+%       mods.LL             log likelihood over iterations (1 x numiter)
+%       mods.c              model centers (num_pcs x num_models)
+%       mods.W              unmixing matrices (num_pcs x num_pcs x num_models
+%       mods.S              full sphering matrix (nchan x nchan) actual sphering matrix is S(1:num_pcs,:)
 %                       
 % See also: eeg_loadamica()
 %
@@ -450,7 +456,7 @@ pcakeep = -1;
          else             
             do_newton = Value;
          end
-      elseif strcmp(Keyword,'update_A') %#ok<STCUL> 
+      elseif strcmp(Keyword,'update_A')
          if isstr(Value)
             fprintf('runamica(): update_A should be 0 or 1');
             return
@@ -730,7 +736,10 @@ end
 if outdir(end) ~= filesep
     outdir(end+1) = filesep;
 end
-system(['mkdir ' outdir]);
+if exist(outdir,'dir')
+    disp(['Will overwrite output in ' outdir])
+end
+system(['mkdir ' outdir '&> /dev/null']);
 
 fid = fopen([outdir 'input.param'],'w');
 if fid < 1
@@ -838,10 +847,10 @@ try
         disp('Running AMICA across multiple nodes ...')
         
         if batch
-            fid = fopen('tmp.sh','w');
+            fid = fopen('batch_script.sh','w');
             fprintf(fid,'#!/bin/sh\n');
             fprintf(fid,'#SBATCH --job-name="amica"\n');
-            strtmp = '#SBATCH --output="amicatst.%j.%N.out"';
+            strtmp = '#SBATCH --output="amica.%j.out"';
             fprintf(fid,'%s\n',strtmp);
             fprintf(fid,'#SBATCH --partition=compute\n');
             fprintf(fid,['#SBATCH --nodes=' int2str(numprocs) '\n']);
@@ -857,7 +866,7 @@ try
             fprintf(fid,[' srun --export=ALL --mpi=pmi2 ' AMBIN ' ' outdir 'input.param\n']);
             fclose(fid);
 
-            system('sbatch ./tmp.sh');
+            system('sbatch ./batch_script.sh');
         else
             str = ['export OMP_NUM_THREADS=' int2str(max_threads) ' ' ...
                 '; export MV2_ENABLE_AFFINITY=0 ' ...
