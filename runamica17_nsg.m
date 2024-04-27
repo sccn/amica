@@ -867,6 +867,7 @@ try
             fclose(fid);
 
             system('sbatch ./batch_script.sh');
+            EEG = dat;  
         else
             str = ['export OMP_NUM_THREADS=' int2str(max_threads) ' ' ...
                 '; export MV2_ENABLE_AFFINITY=0 ' ...
