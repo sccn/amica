@@ -676,6 +676,8 @@ pcakeep = -1;
    end
    
 
+datfile_empty = 0; % flag to check if path to float file is avaialable
+
 % get the number of channels and frames
 if isnumeric(dat)
     chans = size(dat,1);
@@ -683,7 +685,12 @@ if isnumeric(dat)
 elseif isstruct(dat)
     chans = dat.nbchan;
     frames = dat.pnts * dat.trials;
-    file = [dat.filepath filesep dat.datfile];
+    if ~isempty(dat.datfile)
+        file = [dat.filepath filesep dat.datfile];
+    else
+        datfile_empty = 1;
+        warning("Path to the data file (EEG.datfile) is empty, will try to write the data from EEG.data")
+    end
 else
     if dat(1) == '.'
         dat = [pwd dat(2:end)];        
@@ -692,7 +699,12 @@ else
         EEG = pop_loadset(dat);
         chans = EEG.nbchan;
         frames = EEG.pnts * EEG.trials;
-        file = [EEG.filepath filesep EEG.datfile];
+        if ~isempty(EEG.datfile)
+            file = [EEG.filepath filesep EEG.datfile];
+        else
+            datfile_empty = 1;
+            warning("Path to the data file (EEG.datfile) is empty, will try to write the data from EEG.data")
+        end
     elseif chans == -1
         error('Need num_chans keyword argument with number of channels, unknown file type');
     else
@@ -705,14 +717,16 @@ else
     end
 end
 
-if isnumeric(dat)
+
+if isnumeric(dat) || datfile_empty
+    if isnumeric(dat), dat2write = dat; else, dat2write = dat.data; end;
     filename = ['tmpdata' num2str(round(rand(1)*100000)) '.fdt' ];
     disp(['Writing data file: ' fullfile(pwd,filename)]);
     fid = fopen(filename, 'w');
-    fwrite(fid, dat, 'float');
+    fwrite(fid, dat2write, 'float');
     fclose(fid)
-    chans = size(dat,1);
-    frames = size(dat,2);
+    chans = size(dat2write,1);
+    frames = size(dat2write,2);
     file = fullfile(pwd,filename);
 end            
    
@@ -850,7 +864,7 @@ try
             fid = fopen('batch_script.sh','w');
             fprintf(fid,'#!/bin/sh\n');
             fprintf(fid,'#SBATCH --job-name="amica"\n');
-            strtmp = '#SBATCH --output="amica.%j.out"';
+            strtmp = ['#SBATCH --output=' outdir '"amica.%j.out"'];
             fprintf(fid,'%s\n',strtmp);
             fprintf(fid,'#SBATCH --partition=compute\n');
             fprintf(fid,['#SBATCH --nodes=' int2str(numprocs) '\n']);
