@@ -139,6 +139,7 @@ max_threads = 4;       % # threads. For NSG, default to max-number (24) threads
 bytesize = 4;           % convert data to floating point format
 
 batch = 0;
+comp_time = '04:00:00'  % Wall time for Expanse Jobs
 
 fix_init = 0;
 
@@ -509,7 +510,7 @@ pcakeep = -1;
          if isstr(Value)
             fprintf('runamica(): load_param should be 0 or 1');
             return
-         else
+        else
             load_param = Value;
             if load_param == 1
                 load_W = 1;
@@ -668,7 +669,11 @@ pcakeep = -1;
             return
          else
             do_sphere = Value;
-         end    
+         end
+      elseif strcmp(Keyword,'comp_time')
+          if isstr(Value)
+              comp_time = Value;
+          end
       else
          fprintf(['runamica(): unknown flag: ' Keyword])
          return
@@ -873,7 +878,7 @@ try
             fprintf(fid,'#SBATCH --mem=249208M\n');
             fprintf(fid,'#SBATCH --account=csd403\n');
             fprintf(fid,'#SBATCH --export=ALL\n');
-            fprintf(fid,'#SBATCH -t 04:00:00\n');
+            fprintf(fid,['#SBATCH -t ' comp_time '\n']);
             fprintf(fid,'module load cpu/0.15.4 slurm intel intel-mkl mvapich2\n');
             fprintf(fid,['export OMP_NUM_THREADS=' int2str(max_threads) ...
                 '; export MV2_ENABLE_AFFINITY=0; export SRUN_CPUS_PER_TASK=${SLURM_CPUS_PER_TASK}\n']);
@@ -889,10 +894,10 @@ try
                 '; module purge; module load cpu/0.15.4 slurm intel intel-mkl mvapich2 ; ' ...
                 'salloc --partition=compute --nodes=' int2str(numprocs) ' --ntasks-per-node=32 ' ...
                 ' --cpus-per-task=' int2str(max_threads) ...
-                ' --mem=249208M --account=csd403 -t 04:00:00 ' ...
-                'srun --partition=compute --nodes=' int2str(numprocs) ' --ntasks-per-node=32 ' ...
+                ' --mem=249208M --account=csd403 -t ' comp_time ...
+                ' srun --partition=compute --nodes=' int2str(numprocs) ' --ntasks-per-node=32 ' ...
                 ' --cpus-per-task=' int2str(max_threads) ...
-                ' --mem=249208M --account=csd403 --export=ALL -t 04:00:00 ' ...
+                ' --mem=249208M --account=csd403 --export=ALL -t ' comp_time ' ' ...
                 AMBIN ' ' outdir 'input.param'];
 
             system(str);
