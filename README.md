@@ -1,3 +1,5 @@
+![Screenshot 2024-07-25 at 14 12 51](https://github.com/user-attachments/assets/e5880f21-51ae-4ebf-a3de-bc040d6f4aab)
+
 # The AMICA algorithm and EEGLAB plugin
 
 Adaptive Mixture Independent Component Analysis (AMICA) is a program (for Linux, Mac, and Windows) that performs an independent component analysis (ICA) decomposition on input data, potentially with multiple ICA models. It can be run standalone, or from MATLAB.
