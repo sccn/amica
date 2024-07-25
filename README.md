@@ -1,11 +1,14 @@
-# Amica
+# The AMICA algorithm and EEGLAB plugin
+
+Adaptive Mixture Independent Component Analysis (AMICA) is a program (for Linux, Mac, and Windows) that performs an independent component analysis (ICA) decomposition on input data, potentially with multiple ICA models. It can be run standalone, or from MATLAB.
+
 Code for AMICA: Adaptive Mixture ICA with shared component
 
 Refer to the [Amica wiki](https://github.com/japalmer29/amica/wiki) for documentation.
 
 Refer also to Jason Palmer's [AMICA page](https://sccn.ucsd.edu/~jason/amica_web.html).
 
-## TO COMPILE WITH INTEL FORTRAN ON WINDOWS
+# How to compile with Intel Fortran on Windows
 
 1. Install Intel OneAPI Base Toolkit for Windows.
 2. Install Intel OneAPI HPC Toolkit for Windows.
@@ -20,7 +23,7 @@ Refer also to Jason Palmer's [AMICA page](https://sccn.ucsd.edu/~jason/amica_web
 5. The files impi.dll and libfabric.dll should be copied to executable folder when running outside OneAPI command window. Search OneAPI mpi directory for locations.
 
 
-## TO COMPILE WITH INTEL FORTRAN ON MAC
+# THow to compile with Intel Fortran on Mac
 
 0. These are old instructions. Try using Intel OneAPI modifiying the commands similar to the instructions for Windows above.
 1. Install Intel Fortran compiler for Mac/Linux (free demo).
@@ -56,7 +59,7 @@ Refer also to Jason Palmer's [AMICA page](https://sccn.ucsd.edu/~jason/amica_web
          $ ./amica15mac ./amicadefs.param
 
 
-## TO COMPILE WITH INTEL FORTRAN ON UBUNTU
+# How to compile with Intel Fortran on Ubuntu
 
 0. These are old instructions. Try using Intel OneAPI modifiying the commands similar to the instructions for Windows above.
 1. Install Intel Fortran compiler for Linux.
@@ -70,7 +73,7 @@ Refer also to Jason Palmer's [AMICA page](https://sccn.ucsd.edu/~jason/amica_web
          $ ./amica15ub ./amicadefs.param
 
 
-## TO COMPILE WITH INTEL FORTRAN ON EXPANSE SUPERCOMPUTER
+# How to compile with Intel Fortran on Expanse HPC
 
 1. load appropriate modules:
 
@@ -101,7 +104,7 @@ Refer also to Jason Palmer's [AMICA page](https://sccn.ucsd.edu/~jason/amica_web
         --mem=249208M --account=<ACCOUNT> --export=ALL -t 04:00:00 ./amica17nsg ./amicadefs.param
    <If job fails, reduce block_size in amicadefs.param. Increase block_size to speed up.>
 ```
-## VERSION HISTORY
+# Version history
 
 1.7 - Update documentation for pop_runamica and add test file
 
