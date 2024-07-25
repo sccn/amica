@@ -6,7 +6,7 @@ Adaptive Mixture Independent Component Analysis (AMICA) is a program (for Linux,
 
 Code for AMICA: Adaptive Mixture ICA with shared component
 
-Refer to the [Amica wiki](https://github.com/japalmer29/amica/wiki) for documentation.
+Refer to the [Amica wiki](https://github.com/japalmer29/amica/wiki) for documentation or the other menus if you are on the EEGLAB website.
 
 Refer also to Jason Palmer's [AMICA page](https://sccn.ucsd.edu/~jason/amica_web.html).
 
