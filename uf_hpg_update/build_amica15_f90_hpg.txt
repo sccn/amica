@@ -1,0 +1,11 @@
+#-- try with newer edits
+#(07/17/2025) JS, commented out (! include 'mkl_vml.f90'), line 22, in amica15.f90 and using openblas instead of mkl libraries.
+# mpifort is highly recommended for compiling Fortran code with OpenMPI instead of mpif90
+module purge
+module load gcc/12.2.0 openmpi/5.0.7 openblas lapack
+
+mpifort -cpp -fopenmp -O3 -DMKL funmod2.f90 amica15_nomkl.f90 -L/apps/gcc/12.2.0/openblas/0.3.28/lib64 \
+ -L/apps/gcc/12.2.0/lapack/3.11.0/lib -lopenblas -llapack -o amica15ub
+
+#(07/17/2025) JS, updating to use newer compiler. Made a ton of edits to amica15.f90 to remove mkl dependencies. This makes the alg more protable
+# at the cost of computational speed.

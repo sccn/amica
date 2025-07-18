@@ -1,0 +1,41 @@
+#Building MPICH:
+#-- try with newer edits
+#(07/17/2025) JS, commented out (! include 'mkl_vml.f90'), line 22, in amica15.f90 and using openblas instead of mkl libraries.
+# mpifort is highly recommended for compiling Fortran code with OpenMPI instead of mpif90
+module purge
+module load gcc/12.2.0 openmpi/5.0.7 openblas lapack mkl
+
+# mpifort -cpp -fopenmp -O3 funmod2.f90 amica17.f90 -L${MKLROOT}/lib/intel64 -I${MKLROOT}/include -Wl,--start-group \
+#   -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -Wl,--end-group -lpthread -lm -ldl -o amica17ub
+
+cd /blue/dferris/share/s.peterson/rhel9_amica_15
+mpifort -cpp -fopenmp -O3 funmod2.f90 amica17.f90 \
+  -I${MKLROOT}/include -L${MKLROOT}/lib/intel64 \
+  -Wl,--start-group -lmkl_intel_lp64 -liomp5 -lmkl_core -Wl,--end-group \
+  -lpthread -lm -ldl -o amica17ub
+#(07/17/2025) JS, updating to use newer compiler. Needed to directly link mkl libraries inside intel directroy. HPG support team
+# highly discouraged just using the intel module directly. some optinos for parallel computing improvements:
+# -liomp5: Intel OpenMP library for parallel processing
+#       -lmkl_sequential: Sequential Intel MKL library for basic linear algebra operations (option)
+#       -lmkl_intel_thread: Intel MKL library for multi-threaded operations (option)
+# -lmkl_intel_lp64: Intel MKL library for 64-bit linear algebra
+# -lmkl_core: Core Intel MKL library for basic linear algebra operations
+# -Wl,--start-group and -Wl,--end-group: These options are used to group the libraries together for linking, which is necessary when there are circular dependencies between libraries.
+# 
+
+#--- For GCC + MKL (sequential, no threading):
+mpifort -cpp -fopenmp -O3 funmod2.f90 amica17.f90 \
+  -I${MKLROOT}/include -L${MKLROOT}/lib/intel64 \
+  -Wl,--start-group -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -Wl,--end-group \
+  -lpthread -lm -ldl -o amica17ub
+
+#--- For GCC + MKL (OpenMP threading):
+mpifort -cpp -fopenmp -O3 funmod2.f90 amica17.f90 \
+  -I${MKLROOT}/include -L${MKLROOT}/lib/intel64 \
+  -Wl,--start-group -lmkl_intel_lp64 -lmkl_gnu_thread -lmkl_core -Wl,--end-group \
+  -fopenmp -lpthread -lm -ldl -o amica17ub
+
+#--- For GCC + MKL (runtime, recommended for simplicity):
+mpifort -cpp -fopenmp -O3 funmod2.f90 amica17.f90 \
+  -I${MKLROOT}/include -L${MKLROOT}/lib/intel64 \
+  -lmkl_rt -lpthread -lm -ldl -o amica17ub
