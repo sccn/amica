@@ -217,7 +217,17 @@ call MPI_BCAST(rholratefact,1,MPI_DOUBLE_PRECISION,0,seg_comm,ierr)
 
 !--- set up the random number generator for this node
 call system_clock(c1)
-call random_seed(PUT = c1 * (myrank+1) * (seed+myrank+1))
+! Portable RNG seeding: gfortran's random_seed(PUT=...) requires an array of the
+! compiler-defined size (query with random_seed(SIZE=...)); the original passed a
+! fixed size-2 array, which only compiles with ifort. Fill the full-size array
+! from the clock, rank, and fixed seed so per-rank streams still differ.
+call random_seed(size = nseed)
+allocate(seedvec(nseed))
+do jj = 1, nseed
+   seedvec(jj) = c1 + (jj-1) + (myrank+1)*(seed(mod(jj-1,2)+1) + myrank + 1)
+end do
+call random_seed(PUT = seedvec)
+deallocate(seedvec)
 !call DRANDINITIALIZE(1,1,(myrank+1)*(c1/tot_procs + 1),lseed,state,lstate,info)
 
 

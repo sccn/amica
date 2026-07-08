@@ -95,6 +95,8 @@ integer :: num_tot, tot_dim, offset, blk, samp
 INTEGER :: random_init_W = 0, nbyte = 4, read_Winit = 0
 integer :: coststep = 1, writestep = 100, tot_blks, nblks
 INTEGER :: seed(2) = (/ 123456, 654321 /)
+INTEGER :: nseed
+INTEGER, ALLOCATABLE :: seedvec(:)
 INTEGER :: numargs, argnum, filenum, filestart, filestop, sampnum, sampstart
 integer :: sampstop, blknum, blocknum, fld1, fld2, num_blocks
 INTEGER :: i, j, k
