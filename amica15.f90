@@ -214,10 +214,30 @@ call MPI_BCAST(rho0,1,MPI_DOUBLE_PRECISION,0,seg_comm,ierr)
 call MPI_BCAST(minlrate,1,MPI_DOUBLE_PRECISION,0,seg_comm,ierr)
 call MPI_BCAST(lratefact,1,MPI_DOUBLE_PRECISION,0,seg_comm,ierr)
 call MPI_BCAST(rholratefact,1,MPI_DOUBLE_PRECISION,0,seg_comm,ierr)
+call MPI_BCAST(input_seed,1,MPI_INTEGER,0,seg_comm,ierr)
+call MPI_BCAST(use_seed,1,MPI_LOGICAL,0,seg_comm,ierr)
 
 !--- set up the random number generator for this node
-call system_clock(c1)
-call random_seed(PUT = c1 * (myrank+1) * (seed+myrank+1))
+! random_seed(PUT=...) needs an array of size random_seed(SIZE) (e.g. 8 under
+! gfortran); the historic size-2 `seed` array only built under ifort/MKL. Size
+! the PUT array properly so seeding is portable AND -- when `seed` is set in the
+! param file (use_seed) -- reproducible run to run instead of clock-random.
+call random_seed(SIZE = seed_size)
+if (allocated(seed_put)) deallocate(seed_put)
+allocate(seed_put(seed_size))
+if (use_seed) then
+   ! reproducible: deterministic, per-rank-distinct seed from `input_seed`
+   do i = 1, seed_size
+      seed_put(i) = input_seed + 1009*myrank + 37*(i-1)
+   end do
+else
+   ! default (no `seed` in param): clock-seeded, non-reproducible run to run
+   call system_clock(c1)
+   do i = 1, seed_size
+      seed_put(i) = c1 + 1009*(myrank+1)*i + 37*(i-1)
+   end do
+end if
+call random_seed(PUT = seed_put)
 !call DRANDINITIALIZE(1,1,(myrank+1)*(c1/tot_procs + 1),lseed,state,lstate,info)
 
 
@@ -3675,6 +3695,10 @@ subroutine get_cmd_args
         read(tmparg,'(a)') outdirparam
      case('indir')
         read(tmparg,'(a)') indirparam
+     case('seed')
+        read(tmparg,'(i12)') input_seed
+        use_seed = .true.
+        print *, 'seed = ', input_seed; call flush(6)
      end select
 
   end do
